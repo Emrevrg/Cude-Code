@@ -245,6 +245,15 @@ export function createCLI(): Command {
       await runConfigWizard();
     });
 
+  // ─── DESKTOP COMMAND ──────────────────────────────────────────────────────
+  program
+    .command('desktop')
+    .description('Launch the Codiente Desktop GUI application')
+    .action(async () => {
+      const { desktopCommand } = await import('./commands/desktop.js');
+      await desktopCommand();
+    });
+
   return program;
 }
 

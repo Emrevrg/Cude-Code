@@ -3,6 +3,14 @@ import { OpenAIProvider } from './openai.js';
 import { GeminiProvider } from './gemini.js';
 import { GroqProvider } from './groq.js';
 import { OllamaProvider } from './ollama.js';
+import { OpenRouterProvider } from './openrouter.js';
+import { NvidiaProvider } from './nvidia.js';
+import { MistralProvider } from './mistral.js';
+import { TogetherProvider } from './together.js';
+import { PerplexityProvider } from './perplexity.js';
+import { DeepSeekProvider } from './deepseek.js';
+import { XAIProvider } from './xai.js';
+import { CohereProvider } from './cohere.js';
 import type { Provider } from './types.js';
 
 const providers: Provider[] = [
@@ -11,6 +19,14 @@ const providers: Provider[] = [
   new GeminiProvider(),
   new GroqProvider(),
   new OllamaProvider(),
+  new OpenRouterProvider(),
+  new NvidiaProvider(),
+  new MistralProvider(),
+  new TogetherProvider(),
+  new PerplexityProvider(),
+  new DeepSeekProvider(),
+  new XAIProvider(),
+  new CohereProvider(),
 ];
 
 export function getProvider(name: string): Provider {
@@ -30,8 +46,24 @@ export function getConfiguredProviders(): Provider[] {
 }
 
 export function getFreeProviders(): Provider[] {
-  return providers.filter(p => p.name === 'groq' || p.name === 'ollama' || p.name === 'gemini');
+  return providers.filter(
+    p => p.name === 'groq' || p.name === 'ollama' || p.name === 'gemini' || p.name === 'openrouter'
+  );
 }
 
 export type { Provider };
-export { AnthropicProvider, OpenAIProvider, GeminiProvider, GroqProvider, OllamaProvider };
+export {
+  AnthropicProvider,
+  OpenAIProvider,
+  GeminiProvider,
+  GroqProvider,
+  OllamaProvider,
+  OpenRouterProvider,
+  NvidiaProvider,
+  MistralProvider,
+  TogetherProvider,
+  PerplexityProvider,
+  DeepSeekProvider,
+  XAIProvider,
+  CohereProvider,
+};
