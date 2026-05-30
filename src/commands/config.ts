@@ -1,0 +1,223 @@
+import chalk from 'chalk';
+import inquirer from 'inquirer';
+import {
+  getApiKey,
+  setApiKey,
+  removeApiKey,
+  setDefaultProvider,
+  setDefaultModel,
+  getDefaultProvider,
+  getDefaultModel,
+  getConfig,
+} from '../config/index.js';
+import { showSuccess, showError, printKeyValue, showInfo } from '../ui/display.js';
+
+const PROVIDERS = [
+  'anthropic', 'openai', 'gemini', 'groq', 'ollama',
+  'openrouter', 'nvidia', 'mistral', 'together', 'perplexity', 'deepseek', 'xai', 'cohere',
+];
+const KEY_NAMES: Record<string, string> = {
+  anthropic:   'Anthropic Claude',
+  openai:      'OpenAI GPT',
+  gemini:      'Google Gemini',
+  groq:        'Groq (Free)',
+  ollama:      'Ollama (Local/Free)',
+  openrouter:  'OpenRouter',
+  nvidia:      'NVIDIA NIM',
+  mistral:     'Mistral AI',
+  together:    'Together AI',
+  perplexity:  'Perplexity AI',
+  deepseek:    'DeepSeek',
+  xai:         'xAI Grok',
+  cohere:      'Cohere',
+};
+
+export async function runConfigSetKey(provider: string, key?: string): Promise<void> {
+  if (!PROVIDERS.includes(provider)) {
+    showError(`Unknown provider: ${provider}\nValid providers: ${PROVIDERS.join(', ')}`);
+    process.exit(1);
+  }
+
+  let apiKey = key;
+  if (!apiKey) {
+    const answer = await inquirer.prompt([
+      {
+        type: 'password',
+        name: 'key',
+        message: `Enter ${KEY_NAMES[provider] ?? provider} API key:`,
+        validate: (input: string) => input.trim().length > 0 || 'API key cannot be empty',
+      },
+    ]);
+    apiKey = (answer as { key: string }).key;
+  }
+
+  setApiKey(provider, apiKey!.trim());
+  showSuccess(`API key for ${KEY_NAMES[provider] ?? provider} saved successfully`);
+}
+
+export async function runConfigRemoveKey(provider: string): Promise<void> {
+  if (!PROVIDERS.includes(provider)) {
+    showError(`Unknown provider: ${provider}`);
+    process.exit(1);
+  }
+
+  const existing = getApiKey(provider);
+  if (!existing) {
+    showInfo(`No API key configured for ${KEY_NAMES[provider] ?? provider}`);
+    return;
+  }
+
+  const answer = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'confirm',
+      message: `Remove API key for ${KEY_NAMES[provider] ?? provider}?`,
+      default: false,
+    },
+  ]);
+
+  if ((answer as { confirm: boolean }).confirm) {
+    removeApiKey(provider);
+    showSuccess(`API key for ${KEY_NAMES[provider] ?? provider} removed`);
+  } else {
+    showInfo('Cancelled');
+  }
+}
+
+export function runConfigListKeys(): void {
+  console.log();
+  console.log(chalk.bold.cyan('  Configured API Keys:'));
+  console.log(chalk.dim('  ─────────────────────────────────────'));
+
+  for (const provider of PROVIDERS) {
+    const key = getApiKey(provider);
+    const name = (KEY_NAMES[provider] ?? provider).padEnd(20);
+    if (key) {
+      const masked = key.substring(0, 8) + '••••••••' + key.substring(key.length - 4);
+      console.log(`  ${chalk.white(name)} ${chalk.green('✓')} ${chalk.dim(masked)}`);
+    } else {
+      console.log(`  ${chalk.dim(name)} ${chalk.dim('○')} ${chalk.dim('Not configured')}`);
+    }
+  }
+
+  const defaultProvider = getDefaultProvider();
+  const defaultModel = getDefaultModel();
+
+  console.log();
+  console.log(chalk.bold.cyan('  Default Settings:'));
+  console.log(chalk.dim('  ─────────────────────────────────────'));
+  printKeyValue('Default Provider', defaultProvider ?? 'auto', defaultProvider ? 'cyan' : 'white');
+  printKeyValue('Default Model', defaultModel ?? 'auto', defaultModel ? 'cyan' : 'white');
+
+  const configPath = getConfig().path;
+  console.log();
+  console.log(chalk.dim(`  Config stored at: ${configPath}`));
+  console.log();
+}
+
+export async function runConfigSet(setting: string, value: string): Promise<void> {
+  switch (setting.toLowerCase()) {
+    case 'default-provider':
+      if (!PROVIDERS.includes(value)) {
+        showError(`Invalid provider: ${value}\nValid: ${PROVIDERS.join(', ')}`);
+        process.exit(1);
+      }
+      setDefaultProvider(value);
+      showSuccess(`Default provider set to: ${value}`);
+      break;
+
+    case 'default-model': {
+      const { MODELS } = await import('../config/models.js');
+      if (!MODELS[value]) {
+        showError(`Unknown model: ${value}\nValid models: ${Object.keys(MODELS).join(', ')}`);
+        process.exit(1);
+      }
+      setDefaultModel(value);
+      showSuccess(`Default model set to: ${value}`);
+      break;
+    }
+
+    default:
+      showError(`Unknown setting: ${setting}\nValid settings: default-provider, default-model`);
+      process.exit(1);
+  }
+}
+
+export async function runConfigWizard(): Promise<void> {
+  console.log();
+  console.log(chalk.bold.cyan('  Welcome to Codiente CLI Setup Wizard!'));
+  console.log(chalk.dim('  Let\'s configure your AI providers.'));
+  console.log();
+  console.log(chalk.bold('  🆓 Free options (no payment needed):'));
+  console.log(chalk.dim('  • Groq       → console.groq.com (Llama 3.3-70B, fast)'));
+  console.log(chalk.dim('  • Gemini     → aistudio.google.com (Flash free tier)'));
+  console.log(chalk.dim('  • OpenRouter → openrouter.ai (many free :free models)'));
+  console.log(chalk.dim('  • DeepSeek   → platform.deepseek.com (very cheap)'));
+  console.log(chalk.dim('  • Ollama     → ollama.ai (fully local, no key needed)'));
+  console.log();
+  console.log(chalk.bold('  💳 Paid options:'));
+  console.log(chalk.dim('  • Anthropic  → console.anthropic.com (Claude)'));
+  console.log(chalk.dim('  • OpenAI     → platform.openai.com (GPT-4o)'));
+  console.log(chalk.dim('  • Mistral    → console.mistral.ai (Codestral for coding)'));
+  console.log(chalk.dim('  • NVIDIA     → integrate.api.nvidia.com (NIM models)'));
+  console.log(chalk.dim('  • Together   → api.together.xyz'));
+  console.log(chalk.dim('  • Perplexity → www.perplexity.ai (web search AI)'));
+  console.log(chalk.dim('  • xAI        → console.x.ai (Grok)'));
+  console.log(chalk.dim('  • Cohere     → dashboard.cohere.com (Command-R+)'));
+  console.log();
+
+  // Ask which providers to configure
+  const providerChoices = [
+    { name: 'Groq           (free, fast — Llama 3.3-70B)', value: 'groq', checked: true },
+    { name: 'Google Gemini  (free flash tier available)',   value: 'gemini' },
+    { name: 'OpenRouter     (200+ models, some free)',      value: 'openrouter' },
+    { name: 'DeepSeek       (very cheap — $0.14/MTok)',     value: 'deepseek' },
+    { name: 'Anthropic      (Claude Opus/Sonnet/Haiku)',    value: 'anthropic' },
+    { name: 'OpenAI         (GPT-4o)',                      value: 'openai' },
+    { name: 'Mistral AI     (Codestral for coding)',        value: 'mistral' },
+    { name: 'NVIDIA NIM     (Nemotron, Mixtral)',           value: 'nvidia' },
+    { name: 'Together AI    (open-source models)',          value: 'together' },
+    { name: 'Perplexity     (internet-connected AI)',       value: 'perplexity' },
+    { name: 'xAI Grok       (Grok-2)',                      value: 'xai' },
+    { name: 'Cohere         (Command-R+)',                  value: 'cohere' },
+  ];
+
+  const { selectedProviders } = await inquirer.prompt([
+    {
+      type: 'checkbox',
+      name: 'selectedProviders',
+      message: 'Which providers do you want to configure?',
+      choices: providerChoices,
+    },
+  ]) as { selectedProviders: string[] };
+
+  let configured = 0;
+
+  for (const provider of selectedProviders) {
+    if (provider === 'ollama') continue; // no key needed
+    const { key } = await inquirer.prompt([
+      {
+        type: 'password',
+        name: 'key',
+        message: `Enter ${KEY_NAMES[provider] ?? provider} API key (leave empty to skip):`,
+      },
+    ]) as { key: string };
+
+    if (key.trim()) {
+      setApiKey(provider, key.trim());
+      configured++;
+    }
+  }
+
+  if (configured > 0) {
+    showSuccess(`${configured} provider${configured !== 1 ? 's' : ''} configured successfully!`);
+    console.log(chalk.dim('\n  Run "codiente chat" to start chatting.'));
+    console.log(chalk.dim('  Run "codiente providers list" to see all provider status.\n'));
+  } else {
+    console.log(chalk.dim('\n  No providers configured. Add them anytime:'));
+    console.log(chalk.cyan('  codiente config set-key <provider> <key>'));
+    console.log(chalk.dim('\n  For free chat right now:'));
+    console.log(chalk.cyan('  codiente chat --free'));
+    console.log();
+  }
+}
