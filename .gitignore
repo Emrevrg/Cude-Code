@@ -1,5 +1,8 @@
 node_modules/
 dist/
+dist-electron/
+dist-renderer/
+dist-packages/
 *.js.map
 *.d.ts.map
 .env
