@@ -26,7 +26,7 @@ export function createCLI(): Command {
   program
     .command('chat')
     .description('Start an interactive AI chat session')
-    .option('-p, --provider <name>', 'AI provider to use (anthropic|openai|gemini|groq|ollama)')
+    .option('-p, --provider <name>', 'AI provider: anthropic|openai|gemini|groq|ollama|openrouter|nvidia|mistral|together|perplexity|deepseek|xai|cohere')
     .option('-m, --model <name>', 'Model to use')
     .option('-s, --session <name>', 'Session name to continue or create')
     .option('--free', 'Use only free providers (Groq, Gemini flash, Ollama)')
@@ -93,7 +93,7 @@ export function createCLI(): Command {
 
   configCmd
     .command('set-key <provider> [key]')
-    .description('Set API key for a provider (anthropic|openai|gemini|groq)')
+    .description('Set API key for a provider (anthropic|openai|gemini|groq|openrouter|nvidia|mistral|together|perplexity|deepseek|xai|cohere)')
     .action(async (provider: string, key?: string) => {
       const { runConfigSetKey } = await import('./commands/config.js');
       await runConfigSetKey(provider, key);

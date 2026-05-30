@@ -12,12 +12,24 @@ import {
 } from '../config/index.js';
 import { showSuccess, showError, printKeyValue, showInfo } from '../ui/display.js';
 
-const PROVIDERS = ['anthropic', 'openai', 'gemini', 'groq'];
+const PROVIDERS = [
+  'anthropic', 'openai', 'gemini', 'groq', 'ollama',
+  'openrouter', 'nvidia', 'mistral', 'together', 'perplexity', 'deepseek', 'xai', 'cohere',
+];
 const KEY_NAMES: Record<string, string> = {
-  anthropic: 'Anthropic Claude',
-  openai: 'OpenAI GPT',
-  gemini: 'Google Gemini',
-  groq: 'Groq (Free)',
+  anthropic:   'Anthropic Claude',
+  openai:      'OpenAI GPT',
+  gemini:      'Google Gemini',
+  groq:        'Groq (Free)',
+  ollama:      'Ollama (Local/Free)',
+  openrouter:  'OpenRouter',
+  nvidia:      'NVIDIA NIM',
+  mistral:     'Mistral AI',
+  together:    'Together AI',
+  perplexity:  'Perplexity AI',
+  deepseek:    'DeepSeek',
+  xai:         'xAI Grok',
+  cohere:      'Cohere',
 };
 
 export async function runConfigSetKey(provider: string, key?: string): Promise<void> {
@@ -106,8 +118,8 @@ export function runConfigListKeys(): void {
 export async function runConfigSet(setting: string, value: string): Promise<void> {
   switch (setting.toLowerCase()) {
     case 'default-provider':
-      if (!PROVIDERS.includes(value) && value !== 'ollama') {
-        showError(`Invalid provider: ${value}\nValid: ${[...PROVIDERS, 'ollama'].join(', ')}`);
+      if (!PROVIDERS.includes(value)) {
+        showError(`Invalid provider: ${value}\nValid: ${PROVIDERS.join(', ')}`);
         process.exit(1);
       }
       setDefaultProvider(value);
@@ -136,94 +148,76 @@ export async function runConfigWizard(): Promise<void> {
   console.log(chalk.bold.cyan('  Welcome to Codiente CLI Setup Wizard!'));
   console.log(chalk.dim('  Let\'s configure your AI providers.'));
   console.log();
-  console.log(chalk.dim('  Free options:'));
-  console.log(chalk.dim('  - Groq: Get a free key at https://console.groq.com'));
-  console.log(chalk.dim('  - Gemini: Get a free key at https://aistudio.google.com'));
-  console.log(chalk.dim('  - Ollama: Install locally at https://ollama.ai'));
+  console.log(chalk.bold('  🆓 Free options (no payment needed):'));
+  console.log(chalk.dim('  • Groq       → console.groq.com (Llama 3.3-70B, fast)'));
+  console.log(chalk.dim('  • Gemini     → aistudio.google.com (Flash free tier)'));
+  console.log(chalk.dim('  • OpenRouter → openrouter.ai (many free :free models)'));
+  console.log(chalk.dim('  • DeepSeek   → platform.deepseek.com (very cheap)'));
+  console.log(chalk.dim('  • Ollama     → ollama.ai (fully local, no key needed)'));
+  console.log();
+  console.log(chalk.bold('  💳 Paid options:'));
+  console.log(chalk.dim('  • Anthropic  → console.anthropic.com (Claude)'));
+  console.log(chalk.dim('  • OpenAI     → platform.openai.com (GPT-4o)'));
+  console.log(chalk.dim('  • Mistral    → console.mistral.ai (Codestral for coding)'));
+  console.log(chalk.dim('  • NVIDIA     → integrate.api.nvidia.com (NIM models)'));
+  console.log(chalk.dim('  • Together   → api.together.xyz'));
+  console.log(chalk.dim('  • Perplexity → www.perplexity.ai (web search AI)'));
+  console.log(chalk.dim('  • xAI        → console.x.ai (Grok)'));
+  console.log(chalk.dim('  • Cohere     → dashboard.cohere.com (Command-R+)'));
   console.log();
 
-  const answers = await inquirer.prompt([
+  // Ask which providers to configure
+  const providerChoices = [
+    { name: 'Groq           (free, fast — Llama 3.3-70B)', value: 'groq', checked: true },
+    { name: 'Google Gemini  (free flash tier available)',   value: 'gemini' },
+    { name: 'OpenRouter     (200+ models, some free)',      value: 'openrouter' },
+    { name: 'DeepSeek       (very cheap — $0.14/MTok)',     value: 'deepseek' },
+    { name: 'Anthropic      (Claude Opus/Sonnet/Haiku)',    value: 'anthropic' },
+    { name: 'OpenAI         (GPT-4o)',                      value: 'openai' },
+    { name: 'Mistral AI     (Codestral for coding)',        value: 'mistral' },
+    { name: 'NVIDIA NIM     (Nemotron, Mixtral)',           value: 'nvidia' },
+    { name: 'Together AI    (open-source models)',          value: 'together' },
+    { name: 'Perplexity     (internet-connected AI)',       value: 'perplexity' },
+    { name: 'xAI Grok       (Grok-2)',                      value: 'xai' },
+    { name: 'Cohere         (Command-R+)',                  value: 'cohere' },
+  ];
+
+  const { selectedProviders } = await inquirer.prompt([
     {
-      type: 'confirm',
-      name: 'setupGroq',
-      message: 'Set up Groq (free, fast)?',
-      default: true,
+      type: 'checkbox',
+      name: 'selectedProviders',
+      message: 'Which providers do you want to configure?',
+      choices: providerChoices,
     },
-    {
-      type: 'password',
-      name: 'groqKey',
-      message: 'Enter Groq API key:',
-      when: (ans: Record<string, unknown>) => Boolean(ans['setupGroq']),
-      validate: (input: string) => input.trim().length > 0 || 'Key cannot be empty',
-    },
-    {
-      type: 'confirm',
-      name: 'setupGemini',
-      message: 'Set up Google Gemini (free tier available)?',
-      default: false,
-    },
-    {
-      type: 'password',
-      name: 'geminiKey',
-      message: 'Enter Gemini API key:',
-      when: (ans: Record<string, unknown>) => Boolean(ans['setupGemini']),
-      validate: (input: string) => input.trim().length > 0 || 'Key cannot be empty',
-    },
-    {
-      type: 'confirm',
-      name: 'setupAnthropic',
-      message: 'Set up Anthropic Claude (paid)?',
-      default: false,
-    },
-    {
-      type: 'password',
-      name: 'anthropicKey',
-      message: 'Enter Anthropic API key:',
-      when: (ans: Record<string, unknown>) => Boolean(ans['setupAnthropic']),
-      validate: (input: string) => input.trim().length > 0 || 'Key cannot be empty',
-    },
-    {
-      type: 'confirm',
-      name: 'setupOpenAI',
-      message: 'Set up OpenAI GPT (paid)?',
-      default: false,
-    },
-    {
-      type: 'password',
-      name: 'openaiKey',
-      message: 'Enter OpenAI API key:',
-      when: (ans: Record<string, unknown>) => Boolean(ans['setupOpenAI']),
-      validate: (input: string) => input.trim().length > 0 || 'Key cannot be empty',
-    },
-  ]) as Record<string, string | boolean>;
+  ]) as { selectedProviders: string[] };
 
   let configured = 0;
 
-  if (answers['groqKey']) {
-    setApiKey('groq', String(answers['groqKey']).trim());
-    configured++;
-  }
-  if (answers['geminiKey']) {
-    setApiKey('gemini', String(answers['geminiKey']).trim());
-    configured++;
-  }
-  if (answers['anthropicKey']) {
-    setApiKey('anthropic', String(answers['anthropicKey']).trim());
-    configured++;
-  }
-  if (answers['openaiKey']) {
-    setApiKey('openai', String(answers['openaiKey']).trim());
-    configured++;
+  for (const provider of selectedProviders) {
+    if (provider === 'ollama') continue; // no key needed
+    const { key } = await inquirer.prompt([
+      {
+        type: 'password',
+        name: 'key',
+        message: `Enter ${KEY_NAMES[provider] ?? provider} API key (leave empty to skip):`,
+      },
+    ]) as { key: string };
+
+    if (key.trim()) {
+      setApiKey(provider, key.trim());
+      configured++;
+    }
   }
 
   if (configured > 0) {
     showSuccess(`${configured} provider${configured !== 1 ? 's' : ''} configured successfully!`);
-    console.log(chalk.dim('\n  Run "codiente chat" to start chatting.\n'));
+    console.log(chalk.dim('\n  Run "codiente chat" to start chatting.'));
+    console.log(chalk.dim('  Run "codiente providers list" to see all provider status.\n'));
   } else {
-    console.log(chalk.dim('\n  No providers configured. You can add them later with:'));
+    console.log(chalk.dim('\n  No providers configured. Add them anytime:'));
     console.log(chalk.cyan('  codiente config set-key <provider> <key>'));
-    console.log(chalk.dim('\n  For free options, try:'));
-    console.log(chalk.cyan('  codiente chat --free  (uses Ollama local)'));
+    console.log(chalk.dim('\n  For free chat right now:'));
+    console.log(chalk.cyan('  codiente chat --free'));
     console.log();
   }
 }
