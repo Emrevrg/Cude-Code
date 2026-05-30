@@ -2,7 +2,9 @@
   "name": "codiente-cli",
   "version": "1.0.0",
   "description": "Güçlü AI destekli CLI - kodlama, otomasyon ve üretkenlik",
-  "bin": { "codiente": "./dist/index.js" },
+  "bin": {
+    "codiente": "./dist/index.js"
+  },
   "type": "module",
   "scripts": {
     "build": "tsc",
@@ -29,6 +31,7 @@
   },
   "devDependencies": {
     "@types/figlet": "^1.5.8",
+    "@types/inquirer": "^9.0.9",
     "@types/node": "^22.10.0",
     "@types/uuid": "^10.0.0",
     "tsx": "^4.19.2",

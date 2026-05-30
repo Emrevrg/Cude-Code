@@ -30,10 +30,18 @@ export class AnthropicProvider implements Provider {
     if (!this.isConfigured()) return false;
     try {
       const client = this.getClient();
-      await client.models.list();
+      // Make a minimal API call to verify the key works
+      await client.messages.create({
+        model: 'claude-haiku-4-5',
+        max_tokens: 1,
+        messages: [{ role: 'user', content: 'hi' }],
+      });
       return true;
-    } catch {
-      return false;
+    } catch (err) {
+      // If it's an auth error, key is invalid; otherwise consider available
+      if (err instanceof Error && err.message.includes('401')) return false;
+      // Rate limits, etc. still mean the provider is configured
+      return true;
     }
   }
 
