@@ -4,7 +4,7 @@ import { getRemainingBudget } from '../storage/budget.js';
 import { MODELS } from '../config/models.js';
 import type { Provider } from '../providers/types.js';
 
-export type TaskType = 'code' | 'quick' | 'complex' | 'general' | 'analysis' | 'writing';
+export type TaskType = 'code' | 'quick' | 'complex' | 'general' | 'analysis' | 'writing' | 'research' | 'reasoning' | 'cheap';
 
 export interface ProviderModelPair {
   provider: Provider;
@@ -111,14 +111,90 @@ function selectByTaskType(taskType: TaskType): ProviderModelPair {
   const openaiKey = getApiKey('openai');
   const geminiKey = getApiKey('gemini');
   const groqKey = getApiKey('groq');
+  const perplexityKey = getApiKey('perplexity');
+  const deepseekKey = getApiKey('deepseek');
+  const mistralKey = getApiKey('mistral');
 
   switch (taskType) {
+    case 'research':
+      // Perplexity has live internet access — best for web research tasks
+      if (perplexityKey) {
+        return {
+          provider: getProvider('perplexity'),
+          model: 'llama-3.1-sonar-large-128k-online',
+          reason: 'Perplexity has live web search for research tasks',
+        };
+      }
+      // Fallback to large capable model
+      if (anthropicKey) {
+        return {
+          provider: getProvider('anthropic'),
+          model: 'claude-opus-4-8',
+          reason: 'Powerful model for research (no live web)',
+        };
+      }
+      break;
+
+    case 'reasoning':
+      // DeepSeek Reasoner (R1) is specialized for deep reasoning at low cost
+      if (deepseekKey) {
+        return {
+          provider: getProvider('deepseek'),
+          model: 'deepseek-reasoner',
+          reason: 'DeepSeek R1 specializes in deep reasoning',
+        };
+      }
+      // Claude Opus is a strong fallback for reasoning
+      if (anthropicKey) {
+        return {
+          provider: getProvider('anthropic'),
+          model: 'claude-opus-4-8',
+          reason: 'Best available reasoning model',
+        };
+      }
+      break;
+
+    case 'cheap':
+      // DeepSeek Chat is among the cheapest capable models ($0.14/$0.28 per MTok)
+      if (deepseekKey) {
+        return {
+          provider: getProvider('deepseek'),
+          model: 'deepseek-chat',
+          reason: 'DeepSeek Chat is the cheapest capable model',
+        };
+      }
+      // Mistral Small is a good cheap alternative
+      if (mistralKey) {
+        return {
+          provider: getProvider('mistral'),
+          model: 'mistral-small-latest',
+          reason: 'Mistral Small is affordable',
+        };
+      }
+      // Fall through to free providers
+      if (groqKey) {
+        return {
+          provider: getProvider('groq'),
+          model: 'llama-3.3-70b-versatile',
+          reason: 'Groq is free',
+        };
+      }
+      break;
+
     case 'code':
       if (anthropicKey) {
         return {
           provider: getProvider('anthropic'),
           model: 'claude-sonnet-4-6',
           reason: 'Best for code tasks',
+        };
+      }
+      // Codestral is Mistral's coding specialist
+      if (mistralKey) {
+        return {
+          provider: getProvider('mistral'),
+          model: 'codestral-latest',
+          reason: 'Codestral is a coding specialist model',
         };
       }
       if (openaiKey) {
@@ -208,5 +284,5 @@ function selectByTaskType(taskType: TaskType): ProviderModelPair {
 }
 
 export function getAvailableTaskTypes(): TaskType[] {
-  return ['code', 'quick', 'complex', 'general', 'analysis', 'writing'];
+  return ['code', 'quick', 'complex', 'general', 'analysis', 'writing', 'research', 'reasoning', 'cheap'];
 }
