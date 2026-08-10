@@ -11,6 +11,12 @@ import { PerplexityProvider } from './perplexity.js';
 import { DeepSeekProvider } from './deepseek.js';
 import { XAIProvider } from './xai.js';
 import { CohereProvider } from './cohere.js';
+import { AzureOpenAIProvider } from './azure.js';
+import { LiteLLMProvider } from './litellm.js';
+import { HuggingFaceProvider } from './huggingface.js';
+import { VLLMProvider } from './vllm.js';
+import { ReplicateProvider } from './replicate.js';
+import { LocalGGUFProvider } from './gguf.js';
 import type { Provider } from './types.js';
 
 const providers: Provider[] = [
@@ -27,6 +33,12 @@ const providers: Provider[] = [
   new DeepSeekProvider(),
   new XAIProvider(),
   new CohereProvider(),
+  new AzureOpenAIProvider(),
+  new LiteLLMProvider(),
+  new HuggingFaceProvider(),
+  new VLLMProvider(),
+  new ReplicateProvider(),
+  new LocalGGUFProvider(),
 ];
 
 export function getProvider(name: string): Provider {
@@ -47,7 +59,13 @@ export function getConfiguredProviders(): Provider[] {
 
 export function getFreeProviders(): Provider[] {
   return providers.filter(
-    p => p.name === 'groq' || p.name === 'ollama' || p.name === 'gemini' || p.name === 'openrouter'
+    p => p.name === 'groq' || 
+         p.name === 'ollama' || 
+         p.name === 'gemini' || 
+         p.name === 'openrouter' ||
+         p.name === 'litellm' ||
+         p.name === 'vllm' ||
+         p.name === 'gguf'
   );
 }
 
@@ -66,4 +84,10 @@ export {
   DeepSeekProvider,
   XAIProvider,
   CohereProvider,
+  AzureOpenAIProvider,
+  LiteLLMProvider,
+  HuggingFaceProvider,
+  VLLMProvider,
+  ReplicateProvider,
+  LocalGGUFProvider,
 };

@@ -7,8 +7,8 @@ export function createCLI(): Command {
   const program = new Command();
 
   program
-    .name('codiente')
-    .description(chalk.cyan('Güçlü AI destekli CLI - kodlama, otomasyon ve üretkenlik'))
+    .name('cude')
+    .description(chalk.cyan('🚀 Professional AI Development CLI - The best free alternative to Claude Code & Cursor'))
     .version('1.0.0')
     .option('--no-banner', 'Skip the banner display')
     .hook('preAction', (thisCommand) => {
@@ -26,7 +26,7 @@ export function createCLI(): Command {
   program
     .command('chat')
     .description('Start an interactive AI chat session')
-    .option('-p, --provider <name>', 'AI provider: anthropic|openai|gemini|groq|ollama|openrouter|nvidia|mistral|together|perplexity|deepseek|xai|cohere')
+    .option('-p, --provider <name>', 'AI provider: anthropic|openai|gemini|groq|ollama|openrouter|nvidia|mistral|together|perplexity|deepseek|xai|cohere|azure|litellm|huggingface|vllm|replicate|gguf')
     .option('-m, --model <name>', 'Model to use')
     .option('-s, --session <name>', 'Session name to continue or create')
     .option('--free', 'Use only free providers (Groq, Gemini flash, Ollama)')
@@ -93,7 +93,7 @@ export function createCLI(): Command {
 
   configCmd
     .command('set-key <provider> [key]')
-    .description('Set API key for a provider (anthropic|openai|gemini|groq|openrouter|nvidia|mistral|together|perplexity|deepseek|xai|cohere)')
+    .description('Set API key for a provider (anthropic|openai|gemini|groq|openrouter|nvidia|mistral|together|perplexity|deepseek|xai|cohere|azure|litellm|huggingface|replicate)')
     .action(async (provider: string, key?: string) => {
       const { runConfigSetKey } = await import('./commands/config.js');
       await runConfigSetKey(provider, key);
@@ -245,15 +245,6 @@ export function createCLI(): Command {
       await runConfigWizard();
     });
 
-  // ─── DESKTOP COMMAND ──────────────────────────────────────────────────────
-  program
-    .command('desktop')
-    .description('Launch the Codiente Desktop GUI application')
-    .action(async () => {
-      const { desktopCommand } = await import('./commands/desktop.js');
-      await desktopCommand();
-    });
-
   return program;
 }
 
@@ -261,13 +252,14 @@ export async function checkFirstRun(): Promise<void> {
   if (isFirstRun()) {
     markFirstRunDone();
     console.log();
-    console.log(chalk.bold.cyan('  Welcome to Codiente CLI! 🎉'));
-    console.log(chalk.dim('  It looks like this is your first time running Codiente.'));
+    console.log(chalk.bold.cyan('  Welcome to CUDE Code! 🚀'));
+    console.log(chalk.dim('  The professional open-source AI Development CLI'));
     console.log();
     console.log(chalk.dim('  Quick start:'));
-    console.log(chalk.cyan('    codiente setup          ') + chalk.dim('# Configure API keys'));
-    console.log(chalk.cyan('    codiente chat --free    ') + chalk.dim('# Chat for free (Groq/Gemini/Ollama)'));
-    console.log(chalk.cyan('    codiente providers list ') + chalk.dim('# See available providers'));
+    console.log(chalk.cyan('    cude setup          ') + chalk.dim('# Configure API keys & providers'));
+    console.log(chalk.cyan('    cude chat --free    ') + chalk.dim('# Chat for free (Groq/Gemini/Ollama)'));
+    console.log(chalk.cyan('    cude run "task"     ') + chalk.dim('# Run an autonomous agent'));
+    console.log(chalk.cyan('    cude providers list ') + chalk.dim('# See available providers'));
     console.log();
   }
 }

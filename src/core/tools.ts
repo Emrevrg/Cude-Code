@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, existsSync, unlinkSync, copyFileSync, renameSync } from 'fs';
 import { join, resolve, dirname } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -23,6 +23,14 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
           type: 'string',
           description: 'The path to the file to read',
         },
+        start_line: {
+          type: 'number',
+          description: 'Optional line number to start reading from (1-indexed)',
+        },
+        end_line: {
+          type: 'number',
+          description: 'Optional line number to end reading at (1-indexed)',
+        },
       },
       required: ['path'],
     },
@@ -45,6 +53,27 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
   },
   {
+    name: 'replace_in_file',
+    description: 'Replace text in a file by finding and replacing a specific string',
+    parameters: {
+      properties: {
+        path: {
+          type: 'string',
+          description: 'The path to the file',
+        },
+        old_text: {
+          type: 'string',
+          description: 'The text to find and replace',
+        },
+        new_text: {
+          type: 'string',
+          description: 'The new text to replace with',
+        },
+      },
+      required: ['path', 'old_text', 'new_text'],
+    },
+  },
+  {
     name: 'run_command',
     description: 'Execute a shell command and return its output',
     parameters: {
@@ -57,18 +86,26 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
           type: 'string',
           description: 'The working directory to run the command in (optional)',
         },
+        timeout: {
+          type: 'number',
+          description: 'Timeout in milliseconds (default: 60000)',
+        },
       },
       required: ['command'],
     },
   },
   {
     name: 'list_directory',
-    description: 'List the contents of a directory',
+    description: 'List the contents of a directory with file information',
     parameters: {
       properties: {
         path: {
           type: 'string',
           description: 'The path to the directory to list',
+        },
+        recursive: {
+          type: 'boolean',
+          description: 'Whether to list recursively',
         },
       },
       required: ['path'],
@@ -85,6 +122,121 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         },
       },
       required: ['path'],
+    },
+  },
+  {
+    name: 'delete_file',
+    description: 'Delete a file from the filesystem',
+    parameters: {
+      properties: {
+        path: {
+          type: 'string',
+          description: 'The path to the file to delete',
+        },
+      },
+      required: ['path'],
+    },
+  },
+  {
+    name: 'copy_file',
+    description: 'Copy a file from source to destination',
+    parameters: {
+      properties: {
+        source: {
+          type: 'string',
+          description: 'The source file path',
+        },
+        destination: {
+          type: 'string',
+          description: 'The destination file path',
+        },
+      },
+      required: ['source', 'destination'],
+    },
+  },
+  {
+    name: 'search_files',
+    description: 'Search for files matching a pattern in a directory',
+    parameters: {
+      properties: {
+        pattern: {
+          type: 'string',
+          description: 'File pattern to search for (glob pattern or regex)',
+        },
+        directory: {
+          type: 'string',
+          description: 'The directory to search in',
+        },
+      },
+      required: ['pattern', 'directory'],
+    },
+  },
+  {
+    name: 'grep_search',
+    description: 'Search for text content within files',
+    parameters: {
+      properties: {
+        pattern: {
+          type: 'string',
+          description: 'The text or regex pattern to search for',
+        },
+        directory: {
+          type: 'string',
+          description: 'The directory to search in',
+        },
+        file_pattern: {
+          type: 'string',
+          description: 'Optional file glob pattern to limit search',
+        },
+      },
+      required: ['pattern', 'directory'],
+    },
+  },
+  {
+    name: 'get_file_info',
+    description: 'Get detailed information about a file',
+    parameters: {
+      properties: {
+        path: {
+          type: 'string',
+          description: 'The path to the file',
+        },
+      },
+      required: ['path'],
+    },
+  },
+  {
+    name: 'git_command',
+    description: 'Execute a git command in the repository',
+    parameters: {
+      properties: {
+        command: {
+          type: 'string',
+          description: 'The git command to execute (without "git" prefix)',
+        },
+        cwd: {
+          type: 'string',
+          description: 'The repository directory (optional)',
+        },
+      },
+      required: ['command'],
+    },
+  },
+  {
+    name: 'npm_command',
+    description: 'Execute an npm command',
+    parameters: {
+      properties: {
+        command: {
+          type: 'string',
+          description: 'The npm command to execute (without "npm" prefix)',
+        },
+        cwd: {
+          type: 'string',
+          description: 'The working directory (optional)',
+        },
+      },
+      required: ['command'],
     },
   },
 ];
@@ -120,32 +272,64 @@ export async function executeTool(
 ): Promise<ToolResult> {
   switch (name) {
     case 'read_file':
-      return executeReadFile(args.path as string);
+      return executeReadFile(args.path as string, args.start_line as number | undefined, args.end_line as number | undefined);
 
     case 'write_file':
       return executeWriteFile(args.path as string, args.content as string);
 
+    case 'replace_in_file':
+      return executeReplaceInFile(args.path as string, args.old_text as string, args.new_text as string);
+
     case 'run_command':
-      return executeRunCommand(args.command as string, args.cwd as string | undefined);
+      return executeRunCommand(args.command as string, args.cwd as string | undefined, args.timeout as number | undefined);
 
     case 'list_directory':
-      return executeListDirectory(args.path as string);
+      return executeListDirectory(args.path as string, args.recursive as boolean | undefined);
 
     case 'create_directory':
       return executeCreateDirectory(args.path as string);
+
+    case 'delete_file':
+      return executeDeleteFile(args.path as string);
+
+    case 'copy_file':
+      return executeCopyFile(args.source as string, args.destination as string);
+
+    case 'search_files':
+      return executeSearchFiles(args.pattern as string, args.directory as string);
+
+    case 'grep_search':
+      return executeGrepSearch(args.pattern as string, args.directory as string, args.file_pattern as string | undefined);
+
+    case 'get_file_info':
+      return executeGetFileInfo(args.path as string);
+
+    case 'git_command':
+      return executeGitCommand(args.command as string, args.cwd as string | undefined);
+
+    case 'npm_command':
+      return executeNpmCommand(args.command as string, args.cwd as string | undefined);
 
     default:
       return { success: false, output: '', error: `Unknown tool: ${name}` };
   }
 }
 
-function executeReadFile(filePath: string): ToolResult {
+function executeReadFile(filePath: string, startLine?: number, endLine?: number): ToolResult {
   try {
     const resolved = resolve(filePath);
     if (!existsSync(resolved)) {
       return { success: false, output: '', error: `File not found: ${filePath}` };
     }
-    const content = readFileSync(resolved, 'utf-8');
+    let content = readFileSync(resolved, 'utf-8');
+    
+    if (startLine !== undefined || endLine !== undefined) {
+      const lines = content.split('\n');
+      const start = (startLine ?? 1) - 1;
+      const end = endLine ?? lines.length;
+      content = lines.slice(start, end).join('\n');
+    }
+    
     return { success: true, output: content };
   } catch (err) {
     return { success: false, output: '', error: `Failed to read file: ${err instanceof Error ? err.message : String(err)}` };
@@ -166,7 +350,64 @@ function executeWriteFile(filePath: string, content: string): ToolResult {
   }
 }
 
-async function executeRunCommand(command: string, cwd?: string): Promise<ToolResult> {
+function executeReplaceInFile(filePath: string, oldText: string, newText: string): ToolResult {
+  try {
+    const resolved = resolve(filePath);
+    if (!existsSync(resolved)) {
+      return { success: false, output: '', error: `File not found: ${filePath}` };
+    }
+    
+    let content = readFileSync(resolved, 'utf-8');
+    
+    if (!content.includes(oldText)) {
+      return { success: false, output: '', error: `Text not found in file: ${oldText.substring(0, 50)}...` };
+    }
+    
+    content = content.replace(oldText, newText);
+    writeFileSync(resolved, content, 'utf-8');
+    
+    return { success: true, output: `Successfully replaced text in ${filePath}` };
+  } catch (err) {
+    return { success: false, output: '', error: `Failed to replace in file: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
+function executeDeleteFile(filePath: string): ToolResult {
+  try {
+    const resolved = resolve(filePath);
+    if (!existsSync(resolved)) {
+      return { success: false, output: '', error: `File not found: ${filePath}` };
+    }
+    
+    unlinkSync(resolved);
+    return { success: true, output: `Successfully deleted ${filePath}` };
+  } catch (err) {
+    return { success: false, output: '', error: `Failed to delete file: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
+function executeCopyFile(source: string, destination: string): ToolResult {
+  try {
+    const sourcePath = resolve(source);
+    const destPath = resolve(destination);
+    
+    if (!existsSync(sourcePath)) {
+      return { success: false, output: '', error: `Source file not found: ${source}` };
+    }
+    
+    const destDir = dirname(destPath);
+    if (!existsSync(destDir)) {
+      mkdirSync(destDir, { recursive: true });
+    }
+    
+    copyFileSync(sourcePath, destPath);
+    return { success: true, output: `Successfully copied ${source} to ${destination}` };
+  } catch (err) {
+    return { success: false, output: '', error: `Failed to copy file: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
+async function executeRunCommand(command: string, cwd?: string, timeout?: number): Promise<ToolResult> {
   if (isDestructiveCommand(command)) {
     if (confirmCallback) {
       const confirmed = await confirmCallback(
@@ -183,7 +424,7 @@ async function executeRunCommand(command: string, cwd?: string): Promise<ToolRes
   try {
     const { stdout, stderr } = await execAsync(command, {
       cwd: cwd ? resolve(cwd) : process.cwd(),
-      timeout: 60000,
+      timeout: timeout ?? 60000,
     });
     const output = stdout + (stderr ? `\nSTDERR: ${stderr}` : '');
     return { success: true, output };
@@ -200,25 +441,46 @@ async function executeRunCommand(command: string, cwd?: string): Promise<ToolRes
   }
 }
 
-function executeListDirectory(dirPath: string): ToolResult {
+function executeListDirectory(dirPath: string, recursive?: boolean): ToolResult {
   try {
     const resolved = resolve(dirPath);
     if (!existsSync(resolved)) {
       return { success: false, output: '', error: `Directory not found: ${dirPath}` };
     }
-    const entries = readdirSync(resolved);
-    const details = entries.map(entry => {
-      try {
-        const fullPath = join(resolved, entry);
-        const stat = statSync(fullPath);
-        const type = stat.isDirectory() ? 'd' : 'f';
-        const size = stat.isFile() ? `${stat.size}B` : '';
-        return `${type} ${entry}${size ? ` (${size})` : ''}`;
-      } catch {
-        return `? ${entry}`;
-      }
-    });
-    return { success: true, output: details.join('\n') || '(empty directory)' };
+    
+    if (recursive) {
+      // Recursive listing
+      const entries: string[] = [];
+      const walk = (dir: string, prefix = '') => {
+        const items = readdirSync(dir);
+        for (const item of items) {
+          const fullPath = join(dir, item);
+          const stat = statSync(fullPath);
+          const type = stat.isDirectory() ? 'd' : 'f';
+          entries.push(`${prefix}${type} ${item}`);
+          if (stat.isDirectory()) {
+            walk(fullPath, prefix + '  ');
+          }
+        }
+      };
+      walk(resolved);
+      return { success: true, output: entries.join('\n') || '(empty directory)' };
+    } else {
+      // Non-recursive listing
+      const entries = readdirSync(resolved);
+      const details = entries.map(entry => {
+        try {
+          const fullPath = join(resolved, entry);
+          const stat = statSync(fullPath);
+          const type = stat.isDirectory() ? 'd' : 'f';
+          const size = stat.isFile() ? `${stat.size}B` : '';
+          return `${type} ${entry}${size ? ` (${size})` : ''}`;
+        } catch {
+          return `? ${entry}`;
+        }
+      });
+      return { success: true, output: details.join('\n') || '(empty directory)' };
+    }
   } catch (err) {
     return { success: false, output: '', error: `Failed to list directory: ${err instanceof Error ? err.message : String(err)}` };
   }
@@ -227,10 +489,133 @@ function executeListDirectory(dirPath: string): ToolResult {
 function executeCreateDirectory(dirPath: string): ToolResult {
   try {
     const resolved = resolve(dirPath);
+    if (existsSync(resolved)) {
+      return { success: true, output: `Directory already exists: ${dirPath}` };
+    }
+    
     mkdirSync(resolved, { recursive: true });
-    return { success: true, output: `Directory created: ${dirPath}` };
+    return { success: true, output: `Successfully created directory: ${dirPath}` };
   } catch (err) {
     return { success: false, output: '', error: `Failed to create directory: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
+function executeGetFileInfo(filePath: string): ToolResult {
+  try {
+    const resolved = resolve(filePath);
+    if (!existsSync(resolved)) {
+      return { success: false, output: '', error: `File not found: ${filePath}` };
+    }
+    
+    const stat = statSync(resolved);
+    const info = [
+      `Path: ${filePath}`,
+      `Type: ${stat.isDirectory() ? 'directory' : stat.isFile() ? 'file' : 'other'}`,
+      `Size: ${stat.size} bytes`,
+      `Created: ${stat.birthtime.toISOString()}`,
+      `Modified: ${stat.mtime.toISOString()}`,
+      `Permissions: ${stat.mode.toString(8)}`,
+    ].join('\n');
+    
+    return { success: true, output: info };
+  } catch (err) {
+    return { success: false, output: '', error: `Failed to get file info: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
+function executeSearchFiles(pattern: string, directory: string): ToolResult {
+  try {
+    const resolved = resolve(directory);
+    if (!existsSync(resolved)) {
+      return { success: false, output: '', error: `Directory not found: ${directory}` };
+    }
+    
+    const results: string[] = [];
+    const searchPattern = new RegExp(pattern, 'i');
+    
+    const walk = (dir: string) => {
+      const items = readdirSync(dir);
+      for (const item of items) {
+        if (searchPattern.test(item)) {
+          results.push(join(dir, item).replace(resolved, '.'));
+        }
+        const fullPath = join(dir, item);
+        const stat = statSync(fullPath);
+        if (stat.isDirectory() && !item.startsWith('.')) {
+          walk(fullPath);
+        }
+      }
+    };
+    
+    walk(resolved);
+    return { success: true, output: results.length > 0 ? results.join('\n') : 'No matches found' };
+  } catch (err) {
+    return { success: false, output: '', error: `Failed to search files: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
+async function executeGrepSearch(pattern: string, directory: string, filePattern?: string): Promise<ToolResult> {
+  try {
+    const resolved = resolve(directory);
+    if (!existsSync(resolved)) {
+      return { success: false, output: '', error: `Directory not found: ${directory}` };
+    }
+    
+    let grepCmd = `grep -r "${pattern}" "${resolved}"`;
+    if (filePattern) {
+      grepCmd += ` --include="${filePattern}"`;
+    }
+    
+    try {
+      const { stdout } = await execAsync(grepCmd);
+      return { success: true, output: stdout || 'No matches found' };
+    } catch (err: any) {
+      if (err.code === 1) {
+        return { success: true, output: 'No matches found' };
+      }
+      throw err;
+    }
+  } catch (err) {
+    return { success: false, output: '', error: `Failed to search: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
+async function executeGitCommand(command: string, cwd?: string): Promise<ToolResult> {
+  try {
+    const { stdout, stderr } = await execAsync(`git ${command}`, {
+      cwd: cwd ? resolve(cwd) : process.cwd(),
+    });
+    return { success: true, output: stdout + (stderr ? `\n${stderr}` : '') };
+  } catch (err) {
+    if (err instanceof Error && 'stdout' in err) {
+      const execErr = err as any;
+      return {
+        success: false,
+        output: execErr.stdout ?? '',
+        error: execErr.stderr ?? err.message,
+      };
+    }
+    return { success: false, output: '', error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+async function executeNpmCommand(command: string, cwd?: string): Promise<ToolResult> {
+  try {
+    const { stdout, stderr } = await execAsync(`npm ${command}`, {
+      cwd: cwd ? resolve(cwd) : process.cwd(),
+      timeout: 120000,
+    });
+    return { success: true, output: stdout + (stderr ? `\n${stderr}` : '') };
+  } catch (err) {
+    if (err instanceof Error && 'stdout' in err) {
+      const execErr = err as any;
+      return {
+        success: false,
+        output: execErr.stdout ?? '',
+        error: execErr.stderr ?? err.message,
+      };
+    }
+    return { success: false, output: '', error: err instanceof Error ? err.message : String(err) };
   }
 }
 

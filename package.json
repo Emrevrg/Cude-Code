@@ -1,35 +1,53 @@
 {
-  "name": "codiente-cli",
+  "name": "cude-code",
   "version": "1.0.0",
-  "description": "Güçlü AI destekli CLI - kodlama, otomasyon ve üretkenlik",
+  "description": "🚀 Professional open-source CLI AI Development Tool - The best free alternative to Claude Code & Cursor",
+  "author": "Cude Code Contributors",
+  "license": "MIT",
   "bin": {
-    "codiente": "./dist/index.js"
+    "cude": "./dist/index.js"
   },
   "type": "module",
-  "main": "dist-electron/electron/main.js",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "prepublishOnly": "npm run build",
-    "build:electron": "tsc -p tsconfig.electron.json",
-    "build:renderer": "cd renderer && npm run build",
-    "build:desktop": "npm run build:electron && npm run build:renderer",
-    "build:all": "npm run build && npm run build:desktop",
-    "package:win": "electron-builder --win",
-    "package:mac": "electron-builder --mac",
-    "package:linux": "electron-builder --linux",
-    "package:all": "electron-builder --win --mac --linux",
-    "dev:desktop": "concurrently \"cd renderer && npm run dev\" \"wait-on http://localhost:5173 && electron dist-electron/electron/main.js\""
+    "lint": "eslint src --ext .ts",
+    "type-check": "tsc --noEmit",
+    "test": "echo 'Tests coming soon'",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "ai",
+    "cli",
+    "code-generation",
+    "openai",
+    "anthropic",
+    "terminal",
+    "development",
+    "automation",
+    "agent"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
     "@google/generative-ai": "^0.21.0",
+    "@xenova/transformers": "^2.6.0",
     "boxen": "^7.1.1",
     "chalk": "^5.3.0",
+    "cli-table3": "^0.6.3",
     "commander": "^12.1.0",
     "conf": "^13.0.1",
     "date-fns": "^3.6.0",
+    "dotenv": "^16.3.1",
+    "execa": "^8.0.1",
     "figlet": "^1.8.0",
     "gradient-string": "^2.0.2",
     "inquirer": "^9.3.7",
@@ -37,6 +55,8 @@
     "marked-terminal": "^7.2.1",
     "openai": "^4.76.0",
     "ora": "^8.1.1",
+    "playwright": "^1.40.0",
+    "simple-git": "^3.21.0",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
@@ -44,11 +64,10 @@
     "@types/inquirer": "^9.0.9",
     "@types/node": "^22.10.0",
     "@types/uuid": "^10.0.0",
-    "concurrently": "^9.2.1",
-    "electron": "^34.5.8",
-    "electron-builder": "^25.1.8",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
-    "wait-on": "^8.0.5"
+    "typescript": "^5.7.2"
   }
 }

@@ -11,15 +11,16 @@ import type { Session } from '../storage/sessions.js';
 marked.use(markedTerminal() as Parameters<typeof marked.use>[0]);
 
 export function showBanner(): void {
-  const art = figlet.textSync('Codiente', {
+  const art = figlet.textSync('CUDE', {
     font: 'Standard',
     horizontalLayout: 'default',
   });
 
   const gradient = gradientString('cyan', 'magenta', 'blue');
   console.log(gradient(art));
-  console.log(chalk.dim('  AI-powered CLI for coding, automation & productivity'));
-  console.log(chalk.dim('  v1.0.0 | Anthropic · OpenAI · Gemini · Groq · Ollama'));
+  console.log(chalk.cyan.bold('  C')+ chalk.magenta.bold('U') + chalk.blue.bold('D') + chalk.cyan.bold('E ') + chalk.white('Code'));
+  console.log(chalk.dim('  Professional open-source AI Development CLI'));
+  console.log(chalk.dim('  Supports 19+ providers: OpenAI · Anthropic · Gemini · DeepSeek · Groq · Ollama & more'));
   console.log();
 }
 
@@ -200,4 +201,111 @@ export function formatCost(cost: number): string {
   if (cost === 0) return chalk.green('Free');
   if (cost < 0.001) return chalk.yellow(`$${(cost * 1000).toFixed(4)}m`);
   return chalk.yellow(`$${cost.toFixed(6)}`);
+}
+
+export function showQuickTips(): void {
+  console.log();
+  console.log(chalk.bold.cyan('💡 Quick Tips:'));
+  console.log(chalk.dim('  • Start with: cude chat --free    # Use free providers'));
+  console.log(chalk.dim('  • Customize:  cude config setup   # Configure API keys'));
+  console.log(chalk.dim('  • Run tasks:  cude run "prompt"   # Use autonomous agent'));
+  console.log(chalk.dim('  • View help:  cude --help         # See all commands'));
+  console.log();
+}
+
+export function showGettingStarted(): void {
+  console.log();
+  console.log(chalk.bold.cyan('🚀 Getting Started:'));
+  console.log();
+  console.log(chalk.white('1. Configure API Keys:'));
+  console.log(chalk.cyan('   cude setup'));
+  console.log();
+  console.log(chalk.white('2. Choose a Provider:'));
+  console.log(chalk.cyan('   cude providers list'));
+  console.log();
+  console.log(chalk.white('3. Start Chatting:'));
+  console.log(chalk.cyan('   cude chat'));
+  console.log();
+  console.log(chalk.white('4. Run Autonomous Agent:'));
+  console.log(chalk.cyan('   cude run "Create a TypeScript server"'));
+  console.log();
+}
+
+export function showSpinner(message: string): void {
+  console.log(chalk.cyan('⠋ ') + message);
+}
+
+export function showStep(step: number, total: number, message: string): void {
+  const progress = chalk.cyan(`[${step}/${total}]`);
+  console.log(progress + ' ' + message);
+}
+
+export function showTable(headers: string[], rows: string[][], colors?: string[]): void {
+  const columnWidths = headers.map((h, i) => 
+    Math.max(h.length, Math.max(...rows.map(r => r[i]?.length ?? 0)))
+  );
+
+  // Print header
+  const headerRow = headers.map((h, i) => h.padEnd(columnWidths[i])).join('  ');
+  console.log(chalk.bold.cyan(headerRow));
+  console.log(chalk.dim('─'.repeat(columnWidths.reduce((a, w) => a + w + 2, 0))));
+
+  // Print rows
+  for (const row of rows) {
+    const formattedRow = row.map((cell, i) => {
+      const padded = cell.padEnd(columnWidths[i]);
+      const color = colors?.[i];
+      if (!color) return padded;
+      
+      // Apply color based on the color name
+      switch (color) {
+        case 'cyan': return chalk.cyan(padded);
+        case 'green': return chalk.green(padded);
+        case 'yellow': return chalk.yellow(padded);
+        case 'red': return chalk.red(padded);
+        case 'blue': return chalk.blue(padded);
+        case 'magenta': return chalk.magenta(padded);
+        case 'gray': return chalk.gray(padded);
+        case 'dim': return chalk.dim(padded);
+        case 'bold': return chalk.bold(padded);
+        default: return padded;
+      }
+    }).join('  ');
+    console.log(formattedRow);
+  }
+  console.log();
+}
+
+export function showConfigured(items: string[]): void {
+  console.log(chalk.green('✓ Configured:') + ' ' + items.join(', '));
+}
+
+export function showNotConfigured(items: string[]): void {
+  console.log(chalk.yellow('⚠ Not configured:') + ' ' + items.join(', '));
+}
+
+export function showProgress(current: number, total: number, message?: string): void {
+  const percent = Math.round((current / total) * 100);
+  const filled = Math.round((percent / 10));
+  const empty = 10 - filled;
+  const bar = chalk.cyan('█'.repeat(filled)) + chalk.dim('░'.repeat(empty));
+  const text = message ? ` ${message}` : '';
+  console.log(`${bar} ${percent}%${text}`);
+}
+
+export function showCommand(command: string, description?: string): void {
+  console.log(chalk.cyan('  $') + ' ' + chalk.white(command));
+  if (description) {
+    console.log(chalk.dim('    ' + description));
+  }
+}
+
+export function showList(items: string[], bullet = '•'): void {
+  for (const item of items) {
+    console.log(chalk.dim(`  ${bullet} `) + item);
+  }
+}
+
+export function showKeyValue(key: string, value: string, width = 24): void {
+  console.log(chalk.white(key.padEnd(width)) + ': ' + chalk.cyan(value));
 }
