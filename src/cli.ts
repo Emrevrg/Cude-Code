@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { showBanner } from './ui/display.js';
+import { showBanner, showWelcome } from './ui/display.js';
 import { isFirstRun, markFirstRunDone } from './config/index.js';
 
 export function createCLI(): Command {
@@ -8,15 +8,14 @@ export function createCLI(): Command {
 
   program
     .name('cude')
-    .description(chalk.cyan('Cude Code — autonomous AI development CLI for your terminal'))
-    .version('1.1.0')
+    .description(chalk.cyan('AI-powered coding agent — code, automate, and ship faster'))
+    .version('1.0.0')
     .option('--no-banner', 'Skip the banner display')
     .hook('preAction', (thisCommand) => {
       const opts = program.opts() as { banner: boolean };
       if (opts.banner !== false) {
-        // Only show banner on top-level commands, not sub-commands
         const name = thisCommand.name();
-        if (['chat', 'run'].includes(name)) {
+        if (['chat', 'run', 'setup', 'desktop'].includes(name)) {
           showBanner();
         }
       }
@@ -26,21 +25,25 @@ export function createCLI(): Command {
   program
     .command('chat')
     .description('Start an interactive AI chat session')
-    .option('-p, --provider <name>', 'AI provider: anthropic|openai|gemini|groq|ollama|openrouter|nvidia|mistral|together|perplexity|deepseek|xai|cohere|azure|litellm|huggingface|vllm|replicate|gguf')
+    .option('-p, --provider <name>', 'AI provider: anthropic|openai|gemini|groq|ollama|openrouter|nvidia|mistral|together|perplexity|deepseek|xai|cohere|azure|glm|lmstudio|vllm|litellm|replicate|huggingface|sglang|bedrock|openai-compatible')
     .option('-m, --model <name>', 'Model to use')
     .option('-s, --session <name>', 'Session name to continue or create')
     .option('--free', 'Use only free providers (Groq, Gemini flash, Ollama)')
-    .option('-t, --task <type>', 'Task type hint: code|quick|complex|general|analysis|writing', 'general')
+    .option('-t, --task <type>', 'Task type hint: code|quick|complex|general|analysis|writing|research|reasoning|cheap', 'general')
+    .option('-l, --lang <code>', 'Response language: tr|en|de|fr|es|it|pt|nl|pl|ru|ar|zh|ja|ko|sv  (overrides config)')
     .option('--system <prompt>', 'System prompt to set the AI behavior')
     .option('--no-history', 'Don\'t save chat history')
+    .option('-c, --continue', 'Continue the most recent session')
     .action(async (options: {
       provider?: string;
       model?: string;
       session?: string;
       free?: boolean;
       task?: string;
+      lang?: string;
       system?: string;
       history?: boolean;
+      continue?: boolean;
     }) => {
       const { runChat } = await import('./commands/chat.js');
       await runChat({
@@ -49,8 +52,10 @@ export function createCLI(): Command {
         session: options.session,
         free: options.free ?? false,
         task: options.task as import('./core/selector.js').TaskType,
+        lang: options.lang,
         system: options.system,
         noHistory: options.history === false,
+        continue: options.continue ?? false,
       });
     });
 
@@ -65,6 +70,9 @@ export function createCLI(): Command {
     .option('-v, --verbose', 'Show detailed execution steps')
     .option('-y, --yes', 'Skip confirmation prompt')
     .option('--max-iterations <n>', 'Maximum agent iterations (default: 10)', '10')
+    .option('--auto-commit', 'Auto git commit changes after task completes')
+    .option('--git', 'Show git diff summary after task')
+    .option('--team', 'Team mode: Planner → Executor → Reviewer (uses multiple models)')
     .action(async (task: string, options: {
       provider?: string;
       model?: string;
@@ -73,6 +81,9 @@ export function createCLI(): Command {
       verbose?: boolean;
       yes?: boolean;
       maxIterations?: string;
+      autoCommit?: boolean;
+      git?: boolean;
+      team?: boolean;
     }) => {
       const { runRun } = await import('./commands/run.js');
       await runRun(task, {
@@ -83,6 +94,9 @@ export function createCLI(): Command {
         verbose: options.verbose ?? false,
         yes: options.yes ?? false,
         maxIterations: parseInt(options.maxIterations ?? '10', 10),
+        autoCommit: options.autoCommit ?? false,
+        git: options.git ?? false,
+        team: options.team ?? false,
       });
     });
 
@@ -93,7 +107,7 @@ export function createCLI(): Command {
 
   configCmd
     .command('set-key <provider> [key]')
-    .description('Set API key for a provider (anthropic|openai|gemini|groq|ollama|openrouter|nvidia|mistral|together|perplexity|deepseek|xai|cohere|azure|litellm|huggingface|vllm|replicate|gguf)')
+    .description('Set API key for provider (anthropic|openai|gemini|...) or tool: brave (web search)')
     .action(async (provider: string, key?: string) => {
       const { runConfigSetKey } = await import('./commands/config.js');
       await runConfigSetKey(provider, key);
@@ -117,7 +131,7 @@ export function createCLI(): Command {
 
   configCmd
     .command('set <setting> <value>')
-    .description('Set a configuration value (default-provider, default-model)')
+    .description('Set a config value: default-provider | default-model | language')
     .action(async (setting: string, value: string) => {
       const { runConfigSet } = await import('./commands/config.js');
       await runConfigSet(setting, value);
@@ -235,7 +249,7 @@ export function createCLI(): Command {
       await runProvidersModels(provider);
     });
 
-  // ─── SETUP COMMAND (shorthand) ────────────────────────────────────────────
+  // ─── SETUP COMMAND (shorthand) ──────────────────────────────────────────
   program
     .command('setup')
     .description('Run the interactive setup wizard (alias for config setup)')
@@ -245,21 +259,97 @@ export function createCLI(): Command {
       await runConfigWizard();
     });
 
+  // ─── DESKTOP COMMAND ──────────────────────────────────────────────────────
+  program
+    .command('desktop')
+    .alias('gui')
+    .description('Launch the Codiente Desktop GUI application (shares config with CLI)')
+    .action(async () => {
+      const { desktopCommand } = await import('./commands/desktop.js');
+      await desktopCommand();
+    });
+
+  // ─── APPS COMMAND ─────────────────────────────────────────────────────────
+  const appsCmd = program
+    .command('apps')
+    .description('Manage and use specialized AI apps / skills');
+
+  appsCmd
+    .command('list [query]')
+    .description('List all available apps (optionally filter by query)')
+    .action(async (query?: string) => {
+      const { runAppsList } = await import('./commands/apps.js');
+      await runAppsList(query);
+    });
+
+  appsCmd
+    .command('info <id>')
+    .description('Show detailed information about an app')
+    .action(async (id: string) => {
+      const { runAppsInfo } = await import('./commands/apps.js');
+      await runAppsInfo(id);
+    });
+
+  appsCmd
+    .command('install <id>')
+    .description('Install an app (for future remote apps)')
+    .action(async (id: string) => {
+      const { runAppsInstall } = await import('./commands/apps.js');
+      await runAppsInstall(id);
+    });
+
+  appsCmd
+    .command('uninstall <id>')
+    .description('Uninstall a custom app')
+    .action(async (id: string) => {
+      const { runAppsUninstall } = await import('./commands/apps.js');
+      await runAppsUninstall(id);
+    });
+
+  appsCmd
+    .command('use <id>')
+    .description('Start a chat session with a specific app activated')
+    .option('-p, --provider <name>', 'AI provider to use')
+    .option('-m, --model <name>', 'Model to use')
+    .option('--free', 'Use only free providers')
+    .action(async (id: string, options: { provider?: string; model?: string; free?: boolean }) => {
+      const { runAppsUse } = await import('./commands/apps.js');
+      await runAppsUse(id, options);
+    });
+
+  appsCmd
+    .command('create')
+    .description('Interactive wizard to create a custom app')
+    .action(async () => {
+      const { runAppsCreate } = await import('./commands/apps.js');
+      await runAppsCreate();
+    });
+
+  // ─── SERVE COMMAND ────────────────────────────────────────────────────────
+  program
+    .command('serve')
+    .description('Start an OpenAI-compatible HTTP API server')
+    .option('--port <number>', 'Port to listen on (default: 3141)', '3141')
+    .option('-p, --provider <name>', 'AI provider to use')
+    .option('-m, --model <name>', 'Model to use')
+    .action(async (options: { port?: string; provider?: string; model?: string }) => {
+      const { runServe } = await import('./commands/serve.js');
+      await runServe({
+        port: options.port ? parseInt(options.port, 10) : 3141,
+        provider: options.provider,
+        model: options.model,
+      });
+    });
+
   return program;
 }
 
 export async function checkFirstRun(): Promise<void> {
   if (isFirstRun()) {
     markFirstRunDone();
-    console.log();
-    console.log(chalk.bold.cyan('  Welcome to Cude Code! 🚀'));
-    console.log(chalk.dim('  The professional open-source AI Development CLI'));
-    console.log();
-    console.log(chalk.dim('  Quick start:'));
-    console.log(chalk.cyan('    cude setup          ') + chalk.dim('# Configure API keys & providers'));
-    console.log(chalk.cyan('    cude chat --free    ') + chalk.dim('# Chat for free (Groq/Gemini/Ollama)'));
-    console.log(chalk.cyan('    cude run "task"     ') + chalk.dim('# Run an autonomous agent'));
-    console.log(chalk.cyan('    cude providers list ') + chalk.dim('# See available providers'));
-    console.log();
+    showWelcome();
+    if (process.argv.length <= 2) {
+      process.exit(0);
+    }
   }
 }
