@@ -16,12 +16,12 @@ export class OpenRouterProvider implements Provider {
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('openrouter');
-    if (!apiKey) throw new Error('OpenRouter API key not configured. Run: codiente config set-key openrouter <key>');
+    if (!apiKey) throw new Error('OpenRouter API key not configured. Run: cude config set-key openrouter <key>');
     return new OpenAI({
       apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
       defaultHeaders: {
-        'HTTP-Referer': 'https://codiente-cli.dev',
+        'HTTP-Referer': 'https://github.com/Emrevrg/Cude-Code',
         'X-Title': 'Codiente CLI',
       },
     });

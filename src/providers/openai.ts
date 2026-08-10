@@ -18,7 +18,7 @@ export class OpenAIProvider implements Provider {
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('openai');
-    if (!apiKey) throw new Error('OpenAI API key not configured. Run: codiente config set-key openai <key>');
+    if (!apiKey) throw new Error('OpenAI API key not configured. Run: cude config set-key openai <key>');
     return new OpenAI({ apiKey });
   }
 

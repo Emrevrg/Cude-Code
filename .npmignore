@@ -1,0 +1,18 @@
+# Source files — not needed in the published package
+src/
+assets/
+
+# Docs
+*.md
+docs/
+
+# Dev config
+tsconfig.json
+.gitignore
+.git/
+.vscode/
+.idea/
+*.log
+
+# Keep dist (compiled entry point referenced by package.json "bin" and "main")
+!dist/

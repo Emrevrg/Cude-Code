@@ -16,7 +16,7 @@ export class TogetherProvider implements Provider {
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('together');
-    if (!apiKey) throw new Error('Together AI API key not configured. Run: codiente config set-key together <key>');
+    if (!apiKey) throw new Error('Together AI API key not configured. Run: cude config set-key together <key>');
     return new OpenAI({
       apiKey,
       baseURL: 'https://api.together.xyz/v1',

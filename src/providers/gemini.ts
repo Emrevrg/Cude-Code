@@ -16,7 +16,7 @@ export class GeminiProvider implements Provider {
 
   private getClient(): GoogleGenerativeAI {
     const apiKey = getApiKey('gemini');
-    if (!apiKey) throw new Error('Gemini API key not configured. Run: codiente config set-key gemini <key>');
+    if (!apiKey) throw new Error('Gemini API key not configured. Run: cude config set-key gemini <key>');
     return new GoogleGenerativeAI(apiKey);
   }
 

@@ -19,7 +19,7 @@ export interface Session {
 }
 
 function getSessionsDir(): string {
-  const dir = join(homedir(), '.codiente', 'sessions');
+  const dir = join(homedir(), '.cude', 'sessions');
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }

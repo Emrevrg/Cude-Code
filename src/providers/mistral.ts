@@ -16,7 +16,7 @@ export class MistralProvider implements Provider {
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('mistral');
-    if (!apiKey) throw new Error('Mistral API key not configured. Run: codiente config set-key mistral <key>');
+    if (!apiKey) throw new Error('Mistral API key not configured. Run: cude config set-key mistral <key>');
     return new OpenAI({
       apiKey,
       baseURL: 'https://api.mistral.ai/v1',

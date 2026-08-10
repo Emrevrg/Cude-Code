@@ -240,6 +240,70 @@ function selectByTaskType(taskType: TaskType): ProviderModelPair {
         };
       }
       break;
+
+    case 'general':
+      // General-purpose: prefer a balanced capable model. Gemini Pro is strong and cheap.
+      if (geminiKey) {
+        return {
+          provider: getProvider('gemini'),
+          model: 'gemini-1.5-pro',
+          reason: 'Balanced general-purpose model with large context',
+        };
+      }
+      if (anthropicKey) {
+        return {
+          provider: getProvider('anthropic'),
+          model: 'claude-sonnet-4-6',
+          reason: 'Versatile general-purpose model',
+        };
+      }
+      if (openaiKey) {
+        return {
+          provider: getProvider('openai'),
+          model: 'gpt-4o',
+          reason: 'General-purpose model',
+        };
+      }
+      if (groqKey) {
+        return {
+          provider: getProvider('groq'),
+          model: 'llama-3.3-70b-versatile',
+          reason: 'Free general-purpose model',
+        };
+      }
+      break;
+
+    case 'writing':
+      // Writing tasks: value nuance and coherence. Prefer models known for prose quality.
+      if (anthropicKey) {
+        return {
+          provider: getProvider('anthropic'),
+          model: 'claude-sonnet-4-6',
+          reason: 'Strong writing quality',
+        };
+      }
+      if (openaiKey) {
+        return {
+          provider: getProvider('openai'),
+          model: 'gpt-4o',
+          reason: 'Good writing quality',
+        };
+      }
+      if (mistralKey) {
+        return {
+          provider: getProvider('mistral'),
+          model: 'mistral-large-latest',
+          reason: 'Good writing quality',
+        };
+      }
+      if (geminiKey) {
+        return {
+          provider: getProvider('gemini'),
+          model: 'gemini-1.5-pro',
+          reason: 'Free-tier writing model',
+        };
+      }
+      break;
   }
 
   // Fallback: use whatever is configured

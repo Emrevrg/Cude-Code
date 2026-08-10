@@ -16,7 +16,7 @@ export async function runSessionsList(): Promise<void> {
   if (sessions.length === 0) {
     console.log();
     showInfo('No sessions found.');
-    console.log(chalk.dim('  Start a chat session with: codiente chat --session <name>'));
+    console.log(chalk.dim('  Start a chat session with: cude chat --session <name>'));
     console.log();
     return;
   }
@@ -24,9 +24,9 @@ export async function runSessionsList(): Promise<void> {
   console.log();
   console.log(chalk.bold.cyan(`  Chat Sessions (${sessions.length})`));
   showSessionTable(sessions);
-  console.log(chalk.dim('  Continue a session: codiente sessions continue <id>'));
-  console.log(chalk.dim('  Delete a session:   codiente sessions delete <id>'));
-  console.log(chalk.dim('  Export to markdown: codiente sessions export <id>'));
+  console.log(chalk.dim('  Continue a session: cude sessions continue <id>'));
+  console.log(chalk.dim('  Delete a session:   cude sessions delete <id>'));
+  console.log(chalk.dim('  Export to markdown: cude sessions export <id>'));
   console.log();
 }
 
@@ -47,7 +47,7 @@ export async function runSessionsContinue(idOrName: string): Promise<void> {
 
   if (!session) {
     showError(`Session not found: ${idOrName}`);
-    console.log(chalk.dim('  Use "codiente sessions list" to see available sessions'));
+    console.log(chalk.dim('  Use "cude sessions list" to see available sessions'));
     process.exit(1);
   }
 

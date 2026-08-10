@@ -26,7 +26,7 @@ export interface SpendingRecord {
 }
 
 function getBudgetPath(): string {
-  const dir = join(homedir(), '.codiente');
+  const dir = join(homedir(), '.cude');
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }

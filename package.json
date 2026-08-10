@@ -1,9 +1,18 @@
 {
   "name": "cude-code",
-  "version": "1.0.0",
-  "description": "🚀 Professional open-source CLI AI Development Tool - The best free alternative to Claude Code & Cursor",
-  "author": "Cude Code Contributors",
+  "version": "1.1.0",
+  "description": "Professional open-source CLI AI Development Tool with 19 providers, 16 agent tools, sessions, and budget tracking",
+  "author": "Cude Code Contributors <zgremre@gmail.com>",
   "license": "MIT",
+  "homepage": "https://github.com/Emrevrg/Cude-Code",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Emrevrg/Cude-Code.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Emrevrg/Cude-Code/issues",
+    "email": "zgremre@gmail.com"
+  },
   "bin": {
     "cude": "./dist/index.js"
   },
@@ -17,10 +26,11 @@
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "prepublishOnly": "npm run build",
+    "prepack": "npm run build",
     "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit",
     "test": "echo 'Tests coming soon'",
-    "clean": "rm -rf dist"
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "keywords": [
     "ai",

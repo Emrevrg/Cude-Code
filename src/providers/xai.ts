@@ -16,7 +16,7 @@ export class XAIProvider implements Provider {
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('xai');
-    if (!apiKey) throw new Error('xAI API key not configured. Run: codiente config set-key xai <key>');
+    if (!apiKey) throw new Error('xAI API key not configured. Run: cude config set-key xai <key>');
     return new OpenAI({
       apiKey,
       baseURL: 'https://api.x.ai/v1',

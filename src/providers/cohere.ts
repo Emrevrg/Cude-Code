@@ -16,7 +16,7 @@ export class CohereProvider implements Provider {
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('cohere');
-    if (!apiKey) throw new Error('Cohere API key not configured. Run: codiente config set-key cohere <key>');
+    if (!apiKey) throw new Error('Cohere API key not configured. Run: cude config set-key cohere <key>');
     return new OpenAI({
       apiKey,
       baseURL: 'https://api.cohere.com/compatibility/v1',

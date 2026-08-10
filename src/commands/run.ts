@@ -53,7 +53,7 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
   } = options;
 
   if (!task || task.trim().length === 0) {
-    showError('Please provide a task description.\nExample: codiente run "create a React todo app in ./myapp"');
+    showError('Please provide a task description.\nExample: cude run "create a React todo app in ./myapp"');
     process.exit(1);
   }
 
@@ -65,7 +65,7 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
   });
 
   console.log();
-  console.log(chalk.bold.cyan('  Codiente Agent'));
+  console.log(chalk.bold.cyan('  Cude Agent'));
   console.log(chalk.dim('  ─────────────────────────────────'));
   console.log(chalk.dim('  Task:     ') + chalk.white(task));
   console.log(chalk.dim('  Provider: ') + chalk.cyan(provider.displayName));

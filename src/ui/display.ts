@@ -18,9 +18,10 @@ export function showBanner(): void {
 
   const gradient = gradientString('cyan', 'magenta', 'blue');
   console.log(gradient(art));
-  console.log(chalk.cyan.bold('  C')+ chalk.magenta.bold('U') + chalk.blue.bold('D') + chalk.cyan.bold('E ') + chalk.white('Code'));
+  console.log(chalk.cyan.bold('C') + chalk.magenta.bold('U') + chalk.blue.bold('D') + chalk.cyan.bold('E ') + chalk.white('Code') + chalk.dim('  v1.1.0'));
   console.log(chalk.dim('  Professional open-source AI Development CLI'));
-  console.log(chalk.dim('  Supports 19+ providers: OpenAI · Anthropic · Gemini · DeepSeek · Groq · Ollama & more'));
+  console.log(chalk.dim('  19 providers · 16 tools · 9 task types · budget tracking · sessions'));
+  console.log(chalk.dim('  Support: zgremre@gmail.com'));
   console.log();
 }
 

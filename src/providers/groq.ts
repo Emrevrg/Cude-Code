@@ -16,7 +16,7 @@ export class GroqProvider implements Provider {
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('groq');
-    if (!apiKey) throw new Error('Groq API key not configured. Run: codiente config set-key groq <key>');
+    if (!apiKey) throw new Error('Groq API key not configured. Run: cude config set-key groq <key>');
     return new OpenAI({
       apiKey,
       baseURL: 'https://api.groq.com/openai/v1',

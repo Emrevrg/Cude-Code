@@ -16,7 +16,7 @@ export class NvidiaProvider implements Provider {
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('nvidia');
-    if (!apiKey) throw new Error('NVIDIA NIM API key not configured. Run: codiente config set-key nvidia <key>');
+    if (!apiKey) throw new Error('NVIDIA NIM API key not configured. Run: cude config set-key nvidia <key>');
     return new OpenAI({
       apiKey,
       baseURL: 'https://integrate.api.nvidia.com/v1',

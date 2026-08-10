@@ -54,7 +54,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: 'replace_in_file',
-    description: 'Replace text in a file by finding and replacing a specific string',
+    description: 'Replace text in a file by finding and replacing a specific string. Set replace_all=true to replace every occurrence.',
     parameters: {
       properties: {
         path: {
@@ -68,6 +68,10 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         new_text: {
           type: 'string',
           description: 'The new text to replace with',
+        },
+        replace_all: {
+          type: 'boolean',
+          description: 'If true, replace every occurrence (default: false — only the first)',
         },
       },
       required: ['path', 'old_text', 'new_text'],
@@ -239,6 +243,57 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ['command'],
     },
   },
+  {
+    name: 'move_file',
+    description: 'Move or rename a file to a new location',
+    parameters: {
+      properties: {
+        source: {
+          type: 'string',
+          description: 'The current path of the file',
+        },
+        destination: {
+          type: 'string',
+          description: 'The new path for the file',
+        },
+      },
+      required: ['source', 'destination'],
+    },
+  },
+  {
+    name: 'diff_files',
+    description: 'Show a unified diff between two files',
+    parameters: {
+      properties: {
+        file_a: {
+          type: 'string',
+          description: 'Path to the first file',
+        },
+        file_b: {
+          type: 'string',
+          description: 'Path to the second file',
+        },
+      },
+      required: ['file_a', 'file_b'],
+    },
+  },
+  {
+    name: 'apply_patch',
+    description: 'Apply a multi-hunk unified-diff patch to a single file',
+    parameters: {
+      properties: {
+        path: {
+          type: 'string',
+          description: 'Path to the file to patch',
+        },
+        patch: {
+          type: 'string',
+          description: 'A unified diff patch (with --- / +++ headers and @@ hunks) to apply',
+        },
+      },
+      required: ['path', 'patch'],
+    },
+  },
 ];
 
 // Commands that require confirmation
@@ -278,7 +333,7 @@ export async function executeTool(
       return executeWriteFile(args.path as string, args.content as string);
 
     case 'replace_in_file':
-      return executeReplaceInFile(args.path as string, args.old_text as string, args.new_text as string);
+      return executeReplaceInFile(args.path as string, args.old_text as string, args.new_text as string, args.replace_all as boolean | undefined);
 
     case 'run_command':
       return executeRunCommand(args.command as string, args.cwd as string | undefined, args.timeout as number | undefined);
@@ -309,6 +364,15 @@ export async function executeTool(
 
     case 'npm_command':
       return executeNpmCommand(args.command as string, args.cwd as string | undefined);
+
+    case 'move_file':
+      return executeMoveFile(args.source as string, args.destination as string);
+
+    case 'diff_files':
+      return executeDiffFiles(args.file_a as string, args.file_b as string);
+
+    case 'apply_patch':
+      return executeApplyPatch(args.path as string, args.patch as string);
 
     default:
       return { success: false, output: '', error: `Unknown tool: ${name}` };
@@ -350,7 +414,7 @@ function executeWriteFile(filePath: string, content: string): ToolResult {
   }
 }
 
-function executeReplaceInFile(filePath: string, oldText: string, newText: string): ToolResult {
+function executeReplaceInFile(filePath: string, oldText: string, newText: string, replaceAll?: boolean): ToolResult {
   try {
     const resolved = resolve(filePath);
     if (!existsSync(resolved)) {
@@ -362,13 +426,123 @@ function executeReplaceInFile(filePath: string, oldText: string, newText: string
     if (!content.includes(oldText)) {
       return { success: false, output: '', error: `Text not found in file: ${oldText.substring(0, 50)}...` };
     }
-    
-    content = content.replace(oldText, newText);
+
+    const occurrences = content.split(oldText).length - 1;
+    if (replaceAll) {
+      content = content.split(oldText).join(newText);
+    } else {
+      content = content.replace(oldText, newText);
+    }
     writeFileSync(resolved, content, 'utf-8');
     
-    return { success: true, output: `Successfully replaced text in ${filePath}` };
+    const replaced = replaceAll ? occurrences : Math.min(1, occurrences);
+    return { success: true, output: `Replaced ${replaced} occurrence(s) in ${filePath}` };
   } catch (err) {
     return { success: false, output: '', error: `Failed to replace in file: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
+function executeMoveFile(source: string, destination: string): ToolResult {
+  try {
+    const sourcePath = resolve(source);
+    const destPath = resolve(destination);
+
+    if (!existsSync(sourcePath)) {
+      return { success: false, output: '', error: `Source not found: ${source}` };
+    }
+
+    const destDir = dirname(destPath);
+    if (!existsSync(destDir)) {
+      mkdirSync(destDir, { recursive: true });
+    }
+
+    renameSync(sourcePath, destPath);
+    return { success: true, output: `Moved ${source} → ${destination}` };
+  } catch (err) {
+    return { success: false, output: '', error: `Failed to move file: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
+function executeDiffFiles(fileA: string, fileB: string): ToolResult {
+  try {
+    const pathA = resolve(fileA);
+    const pathB = resolve(fileB);
+    if (!existsSync(pathA)) return { success: false, output: '', error: `File not found: ${fileA}` };
+    if (!existsSync(pathB)) return { success: false, output: '', error: `File not found: ${fileB}` };
+
+    const a = readFileSync(pathA, 'utf-8').split('\n');
+    const b = readFileSync(pathB, 'utf-8').split('\n');
+    const diff: string[] = [];
+    diff.push(`--- ${fileA}`);
+    diff.push(`+++ ${fileB}`);
+    const maxLines = Math.max(a.length, b.length);
+    let changed = 0;
+    for (let i = 0; i < maxLines; i++) {
+      const lineA = a[i];
+      const lineB = b[i];
+      if (lineA === lineB) continue;
+      if (lineA !== undefined) {
+        diff.push(`- ${lineA}`);
+        changed++;
+      }
+      if (lineB !== undefined) {
+        diff.push(`+ ${lineB}`);
+        changed++;
+      }
+    }
+    if (changed === 0) diff.push('(files are identical)');
+    return { success: true, output: diff.join('\n') };
+  } catch (err) {
+    return { success: false, output: '', error: `Failed to diff files: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
+function executeApplyPatch(filePath: string, patch: string): ToolResult {
+  try {
+    const resolved = resolve(filePath);
+    if (!existsSync(resolved)) {
+      return { success: false, output: '', error: `File not found: ${filePath}` };
+    }
+
+    const original = readFileSync(resolved, 'utf-8');
+    const lines = original.split('\n');
+    const patchLines = patch.split('\n');
+    let index = 0;
+    let applied = 0;
+
+    while (index < patchLines.length) {
+      const line = patchLines[index];
+      const hunkMatch = line.match(/^@@\s*-(\d+)(?:,\d+)?\s*\+(\d+)(?:,\d+)?\s*@@/);
+      if (!hunkMatch) { index++; continue; }
+      const startLine = Math.max(0, parseInt(hunkMatch[2], 10) - 1);
+      index++;
+      let cursor = startLine;
+      while (index < patchLines.length && !patchLines[index].startsWith('@@')) {
+        const pl = patchLines[index];
+        if (pl.startsWith('---') || pl.startsWith('+++') || pl.startsWith('diff ')) { index++; continue; }
+        if (pl.startsWith(' ')) {
+          cursor++;
+        } else if (pl.startsWith('-')) {
+          if (lines[cursor] === pl.slice(1)) {
+            lines.splice(cursor, 1);
+            applied++;
+          }
+        } else if (pl.startsWith('+')) {
+          lines.splice(cursor, 0, pl.slice(1));
+          cursor++;
+          applied++;
+        }
+        index++;
+      }
+    }
+
+    if (applied === 0) {
+      return { success: false, output: '', error: 'Patch did not apply: no hunks matched' };
+    }
+    writeFileSync(resolved, lines.join('\n'), 'utf-8');
+    return { success: true, output: `Applied patch (${applied} line change(s)) to ${filePath}` };
+  } catch (err) {
+    return { success: false, output: '', error: `Failed to apply patch: ${err instanceof Error ? err.message : String(err)}` };
   }
 }
 

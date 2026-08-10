@@ -15,6 +15,7 @@ import { showSuccess, showError, printKeyValue, showInfo } from '../ui/display.j
 const PROVIDERS = [
   'anthropic', 'openai', 'gemini', 'groq', 'ollama',
   'openrouter', 'nvidia', 'mistral', 'together', 'perplexity', 'deepseek', 'xai', 'cohere',
+  'azure', 'litellm', 'huggingface', 'vllm', 'replicate', 'gguf',
 ];
 const KEY_NAMES: Record<string, string> = {
   anthropic:   'Anthropic Claude',
@@ -30,6 +31,12 @@ const KEY_NAMES: Record<string, string> = {
   deepseek:    'DeepSeek',
   xai:         'xAI Grok',
   cohere:      'Cohere',
+  azure:       'Azure OpenAI',
+  litellm:     'LiteLLM Proxy',
+  huggingface: 'HuggingFace Inference API',
+  vllm:        'vLLM (Self-hosted)',
+  replicate:   'Replicate',
+  gguf:        'Local GGUF (llama.cpp)',
 };
 
 export async function runConfigSetKey(provider: string, key?: string): Promise<void> {
@@ -145,7 +152,7 @@ export async function runConfigSet(setting: string, value: string): Promise<void
 
 export async function runConfigWizard(): Promise<void> {
   console.log();
-  console.log(chalk.bold.cyan('  Welcome to Codiente CLI Setup Wizard!'));
+  console.log(chalk.bold.cyan('  Welcome to Cude Code Setup Wizard!'));
   console.log(chalk.dim('  Let\'s configure your AI providers.'));
   console.log();
   console.log(chalk.bold('  🆓 Free options (no payment needed):'));
@@ -165,6 +172,14 @@ export async function runConfigWizard(): Promise<void> {
   console.log(chalk.dim('  • xAI        → console.x.ai (Grok)'));
   console.log(chalk.dim('  • Cohere     → dashboard.cohere.com (Command-R+)'));
   console.log();
+  console.log(chalk.bold('  🖥️ Self-hosted / advanced:'));
+  console.log(chalk.dim('  • Azure OpenAI → your Azure deployment'));
+  console.log(chalk.dim('  • LiteLLM      → local proxy gateway'));
+  console.log(chalk.dim('  • HuggingFace  → huggingface.co (inference API)'));
+  console.log(chalk.dim('  • vLLM         → self-hosted inference server'));
+  console.log(chalk.dim('  • Replicate    → replicate.com'));
+  console.log(chalk.dim('  • Local GGUF   → llama.cpp server (no key needed)'));
+  console.log();
 
   // Ask which providers to configure
   const providerChoices = [
@@ -180,6 +195,11 @@ export async function runConfigWizard(): Promise<void> {
     { name: 'Perplexity     (internet-connected AI)',       value: 'perplexity' },
     { name: 'xAI Grok       (Grok-2)',                      value: 'xai' },
     { name: 'Cohere         (Command-R+)',                  value: 'cohere' },
+    { name: 'Azure OpenAI   (your deployment)',             value: 'azure' },
+    { name: 'LiteLLM Proxy   (local gateway)',              value: 'litellm' },
+    { name: 'HuggingFace     (inference API)',               value: 'huggingface' },
+    { name: 'vLLM           (self-hosted)',                 value: 'vllm' },
+    { name: 'Replicate       (hosted models)',              value: 'replicate' },
   ];
 
   const { selectedProviders } = await inquirer.prompt([
@@ -211,13 +231,13 @@ export async function runConfigWizard(): Promise<void> {
 
   if (configured > 0) {
     showSuccess(`${configured} provider${configured !== 1 ? 's' : ''} configured successfully!`);
-    console.log(chalk.dim('\n  Run "codiente chat" to start chatting.'));
-    console.log(chalk.dim('  Run "codiente providers list" to see all provider status.\n'));
+    console.log(chalk.dim('\n  Run "cude chat" to start chatting.'));
+    console.log(chalk.dim('  Run "cude providers list" to see all provider status.\n'));
   } else {
     console.log(chalk.dim('\n  No providers configured. Add them anytime:'));
-    console.log(chalk.cyan('  codiente config set-key <provider> <key>'));
+    console.log(chalk.cyan('  cude config set-key <provider> <key>'));
     console.log(chalk.dim('\n  For free chat right now:'));
-    console.log(chalk.cyan('  codiente chat --free'));
+    console.log(chalk.cyan('  cude chat --free'));
     console.log();
   }
 }

@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 export async function runBudgetSet(amount: string, options: { monthly?: boolean } = {}): Promise<void> {
   const value = parseFloat(amount);
   if (isNaN(value) || value < 0) {
-    showError('Invalid amount. Please provide a positive number.\nExample: codiente budget set 10');
+    showError('Invalid amount. Please provide a positive number.\nExample: cude budget set 10');
     process.exit(1);
   }
 
@@ -61,7 +61,7 @@ export async function runBudgetStatus(): Promise<void> {
     }
   } else {
     console.log();
-    showInfo('No budget limits set. Use "codiente budget set <amount>" to set one.');
+    showInfo('No budget limits set. Use "cude budget set <amount>" to set one.');
   }
 
   if (Object.keys(budget.perProviderSpent).length > 0) {
@@ -116,7 +116,7 @@ export async function runBudgetReset(): Promise<void> {
 export async function runBudgetAlert(amount: string): Promise<void> {
   const value = parseFloat(amount);
   if (isNaN(value) || value < 0) {
-    showError('Invalid amount.\nExample: codiente budget alert 8');
+    showError('Invalid amount.\nExample: cude budget alert 8');
     process.exit(1);
   }
 

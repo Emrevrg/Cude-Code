@@ -19,7 +19,7 @@ export class PerplexityProvider implements Provider {
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('perplexity');
-    if (!apiKey) throw new Error('Perplexity API key not configured. Run: codiente config set-key perplexity <key>');
+    if (!apiKey) throw new Error('Perplexity API key not configured. Run: cude config set-key perplexity <key>');
     return new OpenAI({
       apiKey,
       baseURL: 'https://api.perplexity.ai',

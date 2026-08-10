@@ -18,7 +18,7 @@ export class AnthropicProvider implements Provider {
 
   private getClient(): Anthropic {
     const apiKey = getApiKey('anthropic');
-    if (!apiKey) throw new Error('Anthropic API key not configured. Run: codiente config set-key anthropic <key>');
+    if (!apiKey) throw new Error('Anthropic API key not configured. Run: cude config set-key anthropic <key>');
     return new Anthropic({ apiKey });
   }
 

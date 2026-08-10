@@ -26,8 +26,8 @@ export async function runProvidersList(): Promise<void> {
   const configuredCount = results.filter(r => r.provider.isConfigured() || r.available).length;
   console.log(chalk.dim(`  ${configuredCount} of ${providers.length} providers available`));
   console.log();
-  console.log(chalk.dim('  Add API keys: codiente config set-key <provider> <key>'));
-  console.log(chalk.dim('  List models:  codiente providers models'));
+  console.log(chalk.dim('  Add API keys: cude config set-key <provider> <key>'));
+  console.log(chalk.dim('  List models:  cude providers models'));
   console.log();
 }
 
@@ -115,7 +115,7 @@ export async function runProvidersModels(providerFilter?: string): Promise<void>
             console.log(`  ${chalk.white(m.name.padEnd(35))} ${chalk.cyan('[local free]')} ${chalk.dim(`${sizeMB} MB`)}`);
           }
           console.log();
-          console.log(chalk.dim('  Use: codiente chat --model ollama/<name>'));
+          console.log(chalk.dim('  Use: cude chat --model ollama/<name>'));
           console.log();
         } else {
           console.log(chalk.dim('  No Ollama models installed. Run: ollama pull llama3'));

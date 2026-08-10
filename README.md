@@ -1,24 +1,29 @@
-# 🚀 CUDE Code - Professional AI Development CLI
+<p align="center">
+  <img src="./assets/logo.svg" alt="Cude Code logo" width="160" height="160">
+</p>
+
+# 🚀 Cude Code - Professional AI Development CLI
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 [![npm](https://img.shields.io/npm/v/cude-code)](https://www.npmjs.com/package/cude-code)
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-green)](./PROJECT_STATUS.md)
+[![Support](https://img.shields.io/badge/support-zgremre@gmail.com-cyan)](mailto:zgremre@gmail.com)
 
-**The best open-source alternative to Claude Code & Cursor**
+**The professional, multi-provider AI development CLI for your terminal**
 
-CUDE Code is a production-ready, feature-rich CLI tool for AI-assisted development. It supports 19+ AI providers and brings professional capabilities to your terminal.
+Cude Code is a production-ready, feature-rich CLI tool for AI-assisted development. It supports 19 AI providers and brings professional capabilities to your terminal.
 
 ```bash
 npm install -g cude-code
 cude chat
 ```
 
-## ⭐ Why CUDE Code?
+## ⭐ Why Cude Code?
 
 - **🆓 Free & Open Source**: MIT licensed, no hidden costs
-- **🤖 19+ AI Providers**: OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, and more
+- **🤖 19 AI Providers**: OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, and more
 - **🔌 Plug & Play**: Works out of the box with just an API key
 - **⚡ Autonomous Agent**: Solve complex tasks with tool-use
 - **💰 Cost Tracking**: Monitor spending, set budgets, get alerts
@@ -162,16 +167,15 @@ OpenAI, Anthropic, Google Gemini, Groq, DeepSeek, Mistral, xAI, Cohere, Together
 
 ## 🛠️ Available Tools
 
-CUDE Code comes with powerful built-in tools:
+Cude Code's agent can use 16 built-in tools:
 
-- **File Operations**: read, write, replace, delete, copy files
-- **Directory Management**: create, list, search directories  
-- **Search**: file search, grep content search
-- **Shell Commands**: execute any command safely
-- **Git Integration**: run git commands
-- **NPM Integration**: manage packages
+- **File Operations**: `read_file`, `write_file`, `replace_in_file` (multi-occurrence via `replace_all`), `delete_file`, `copy_file`, `move_file` (rename), `get_file_info`
+- **Directory Management**: `create_directory`, `list_directory`
+- **Search**: `search_files` (pattern), `grep_search` (content)
+- **Shell & Build**: `run_command`, `npm_command`, `git_command`
+- **Patch & Diff**: `apply_patch` (multi-hunk unified diff), `diff_files` (file comparison)
 
-[→ Full Tool Reference](./docs/tools.md)
+Destructive commands (e.g. `rm -rf`, `mkfs.`, `shutdown`) trigger an interactive confirmation before execution.
 
 ## 💰 Cost Tracking
 
@@ -198,10 +202,7 @@ Supported cost tracking for:
 
 ## 📖 Documentation
 
-- **[Project Status](./PROJECT_STATUS.md)** - Current status, metrics, and verification checklist
-- **[Providers Guide](./PROVIDERS.md)** - Setup each provider with detailed instructions
-- **[Implementation Details](./IMPLEMENTATION_SUMMARY.md)** - Technical architecture and features
-- **[Changelog](./CHANGELOG.md)** - Release notes and roadmap
+- **[Changelog](./CHANGELOG.md)** - Release notes
 
 ## 🎯 Common Use Cases
 
@@ -245,9 +246,13 @@ export CUDE_DEFAULT_PROVIDER="openai"
 export CUDE_DEFAULT_MODEL="gpt-4"
 ```
 
+> Note: API keys are normally stored in `~/.cude/config.json` via `cude config set-key`. The environment variables above are read at startup as a fallback when no stored key exists, which is handy for CI runs and ephemeral shells.
+
 ### Config Files
-- **Linux/macOS**: `~/.config/cude/config.json`
-- **Windows**: `%APPDATA%\cude\config.json`
+- **Linux/macOS**: `~/.cude/config.json`
+- **Windows**: `%USERPROFILE%\.cude\config.json`
+
+Sessions are stored under `~/.cude/sessions/` and spending records under `~/.cude/budget.json`. Upgrading from a previous build? On first launch, Cude Code automatically migrates any existing `~/.codiente` directory to `~/.cude`.
 
 ## 🔒 Security
 
@@ -282,43 +287,44 @@ We welcome contributions! Areas we need help with:
 
 ## 📄 License
 
-MIT © 2025 CUDE Code Contributors
+MIT © 2025 Cude Code Contributors
 
 Free for personal and commercial use.
 
 ## 🆘 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/cude-code/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/cude-code/discussions)
-- **Email**: support@cude-code.dev
-- **Docs**: [Full Documentation](./docs/)
+- **Issues**: [GitHub Issues](https://github.com/Emrevrg/Cude-Code/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Emrevrg/Cude-Code/discussions)
+- **Email**: zgremre@gmail.com
+- **In-app help**: run `cude --help` or `cude <command> --help`
 
 ## 🎓 Learning Resources
 
-- [Provider Configuration Guide](./PROVIDERS.md)
-- [Advanced Usage Patterns](./docs/advanced.md)
-- [API Reference](./docs/api.md)
-- [Examples & Recipes](./docs/examples.md)
+- [Changelog](./CHANGELOG.md)
+- [Provider Configuration](README.md#-supported-providers)
+- [Available Tools](README.md#-available-tools)
+- [Common Use Cases](README.md#-common-use-cases)
 
 ## 🚀 Roadmap
 
-### Current (v1.0)
-- ✅ Multi-provider support
-- ✅ Chat & agent modes
+### Current (v1.1)
+- ✅ 19 AI providers
+- ✅ Chat & autonomous agent modes
+- ✅ 16 agent tools (file ops, git, npm, diff, patch, search)
 - ✅ Session management
-- ✅ Cost tracking
+- ✅ Cost tracking with budgets & alerts
+- ✅ Environment-variable key fallback
+- ✅ Automatic legacy data migration
 
-### Planned (v1.1)
-- 🔄 MCP server support
-- 🔄 RAG system
-- 🔄 Browser automation
-- 🔄 WebUI
+### Planned (v1.2)
+- 🔄 MCP (Model Context Protocol) server support
+- 🔄 Browser automation tool
+- 🔄 Native RAG / local docs index
 
 ### Future (v2.0)
 - 🔄 VS Code extension
-- 🔄 Team collaboration
-- 🔄 Advanced analytics
-- 🔄 Cloud sync
+- 🔄 Web UI dashboard
+- 🔄 Advanced analytics & spend reports
 
 ## 📜 Changelog
 
@@ -328,6 +334,6 @@ See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
 **Made with ❤️ by developers, for developers**
 
-*CUDE Code - Where AI meets your terminal*
+*Cude Code - Where AI meets your terminal*
 
-[![Star on GitHub](https://img.shields.io/github/stars/yourusername/cude-code?style=social)](https://github.com/yourusername/cude-code)
+[![Star on GitHub](https://img.shields.io/github/stars/Emrevrg/Cude-Code?style=social)](https://github.com/Emrevrg/Cude-Code)

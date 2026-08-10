@@ -16,7 +16,7 @@ export class DeepSeekProvider implements Provider {
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('deepseek');
-    if (!apiKey) throw new Error('DeepSeek API key not configured. Run: codiente config set-key deepseek <key>');
+    if (!apiKey) throw new Error('DeepSeek API key not configured. Run: cude config set-key deepseek <key>');
     return new OpenAI({
       apiKey,
       baseURL: 'https://api.deepseek.com/v1',

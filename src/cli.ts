@@ -8,8 +8,8 @@ export function createCLI(): Command {
 
   program
     .name('cude')
-    .description(chalk.cyan('🚀 Professional AI Development CLI - The best free alternative to Claude Code & Cursor'))
-    .version('1.0.0')
+    .description(chalk.cyan('Cude Code — autonomous AI development CLI for your terminal'))
+    .version('1.1.0')
     .option('--no-banner', 'Skip the banner display')
     .hook('preAction', (thisCommand) => {
       const opts = program.opts() as { banner: boolean };
@@ -93,7 +93,7 @@ export function createCLI(): Command {
 
   configCmd
     .command('set-key <provider> [key]')
-    .description('Set API key for a provider (anthropic|openai|gemini|groq|openrouter|nvidia|mistral|together|perplexity|deepseek|xai|cohere|azure|litellm|huggingface|replicate)')
+    .description('Set API key for a provider (anthropic|openai|gemini|groq|ollama|openrouter|nvidia|mistral|together|perplexity|deepseek|xai|cohere|azure|litellm|huggingface|vllm|replicate|gguf)')
     .action(async (provider: string, key?: string) => {
       const { runConfigSetKey } = await import('./commands/config.js');
       await runConfigSetKey(provider, key);
@@ -252,7 +252,7 @@ export async function checkFirstRun(): Promise<void> {
   if (isFirstRun()) {
     markFirstRunDone();
     console.log();
-    console.log(chalk.bold.cyan('  Welcome to CUDE Code! 🚀'));
+    console.log(chalk.bold.cyan('  Welcome to Cude Code! 🚀'));
     console.log(chalk.dim('  The professional open-source AI Development CLI'));
     console.log();
     console.log(chalk.dim('  Quick start:'));
