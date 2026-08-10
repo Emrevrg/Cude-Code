@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { listProviders } from '../providers/index.js';
 import { MODELS } from '../config/models.js';
-import { showProviderTable, showModelTable } from '../ui/display.js';
+import { showProviderTable, showModelTable, showBanner, printSeparator } from '../ui/display.js';
 import { startSpinner, stopSpinner } from '../ui/spinner.js';
 import { OllamaProvider } from '../providers/ollama.js';
 
@@ -18,16 +18,23 @@ export async function runProvidersList(): Promise<void> {
 
   stopSpinner(true);
 
-  console.log();
-  console.log(chalk.bold.cyan('  AI Providers'));
+  showBanner();
+  console.log(chalk.bold.hex('#06b6d4')('  ◈ AI Providers'));
+  printSeparator();
   showProviderTable(results);
 
-  // Show available models for configured providers
   const configuredCount = results.filter(r => r.provider.isConfigured() || r.available).length;
-  console.log(chalk.dim(`  ${configuredCount} of ${providers.length} providers available`));
+  const freeCount       = results.filter(r => r.provider.name === 'groq' || r.provider.name === 'ollama').length;
+
+  console.log(
+    chalk.dim('  ') +
+    chalk.green(`${configuredCount} available`) +
+    chalk.dim(` of ${providers.length} providers  ·  `) +
+    chalk.green(`${freeCount} free`)
+  );
   console.log();
-  console.log(chalk.dim('  Add API keys: cude config set-key <provider> <key>'));
-  console.log(chalk.dim('  List models:  cude providers models'));
+  console.log(chalk.dim('  cude config set-key <provider> <key>') + chalk.dim('   add a key'));
+  console.log(chalk.dim('  cude providers models               ') + chalk.dim('   list models'));
   console.log();
 }
 
@@ -79,14 +86,29 @@ export async function runProvidersTest(): Promise<void> {
 }
 
 export async function runProvidersModels(providerFilter?: string): Promise<void> {
-  const allModels = Object.values(MODELS).map(m => ({
-    id: m.id,
-    name: m.name,
-    provider: m.provider,
-    free: m.free,
-    local: m.local,
-    pricing: m.pricing,
+  let allModels = Object.values(MODELS).map(m => ({
+    id: m.id, name: m.name, provider: m.provider,
+    free: m.free, local: m.local, pricing: m.pricing,
   }));
+
+  // Live OpenRouter model list — fetch if provider is openrouter or no filter
+  if (!providerFilter || providerFilter === 'openrouter') {
+    const { OpenRouterProvider } = await import('../providers/openrouter.js');
+    const or = new OpenRouterProvider();
+    if (or.isConfigured()) {
+      const spinner = startSpinner('Fetching live OpenRouter model list…');
+      try {
+        await or.refreshModels();
+        const liveModels = or.listModels();
+        stopSpinner(true, `OpenRouter: ${liveModels.length} models`);
+        // Replace static openrouter entries with live ones
+        allModels = allModels.filter(m => m.provider !== 'openrouter');
+        allModels.push(...liveModels as typeof allModels);
+      } catch {
+        stopSpinner(false, 'OpenRouter: could not fetch live list, using cached');
+      }
+    }
+  }
 
   const filtered = providerFilter
     ? allModels.filter(m => m.provider === providerFilter)
@@ -97,7 +119,16 @@ export async function runProvidersModels(providerFilter?: string): Promise<void>
     return;
   }
 
-  showModelTable(filtered);
+  // For openrouter, show free models first then group
+  if (providerFilter === 'openrouter' || !providerFilter) {
+    const freeOr  = filtered.filter(m => m.provider === 'openrouter' && m.free);
+    const paidOr  = filtered.filter(m => m.provider === 'openrouter' && !m.free);
+    const others  = filtered.filter(m => m.provider !== 'openrouter');
+    const sorted  = [...others, ...freeOr, ...paidOr];
+    showModelTable(sorted.slice(0, 120));
+  } else {
+    showModelTable(filtered);
+  }
 
   // Show Ollama models if available
   const providers = listProviders();

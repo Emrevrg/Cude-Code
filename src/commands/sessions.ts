@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { writeFileSync } from 'fs';
+import { writeFileSync, renameSync } from 'fs';
 import { resolve } from 'path';
 import {
   listSessions,
@@ -55,7 +55,7 @@ export async function runSessionsContinue(idOrName: string): Promise<void> {
   showInfo(`Continuing session: ${chalk.cyan(session.name)} (${session.messages.filter(m => m.role !== 'system').length} messages)`);
 
   await runChat({
-    session: session.name,
+    session: session.id,  // pass ID so loadSession() finds it directly
     provider: session.provider,
     model: session.model,
   });
@@ -122,7 +122,14 @@ export async function runSessionsExport(idOrName: string, outputPath?: string): 
   const filename = outputPath ?? `${session.name.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.md`;
   const fullPath = resolve(filename);
 
-  writeFileSync(fullPath, markdown, 'utf-8');
+  try {
+    const tmp = fullPath + '.tmp';
+    writeFileSync(tmp, markdown, 'utf-8');
+    renameSync(tmp, fullPath);
+  } catch (err) {
+    showError(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  }
   showSuccess(`Session exported to: ${fullPath}`);
   console.log(chalk.dim(`  ${session.messages.filter(m => m.role !== 'system').length} messages, $${session.totalCost.toFixed(6)} total cost`));
 }

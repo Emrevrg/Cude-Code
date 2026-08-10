@@ -7,7 +7,7 @@ import {
   resetSpending,
   getRemainingBudget,
 } from '../storage/budget.js';
-import { showSuccess, showInfo, showError, printKeyValue, printSeparator } from '../ui/display.js';
+import { showSuccess, showInfo, showError, printKeyValue, printSeparator, showBudgetBar } from '../ui/display.js';
 import { format } from 'date-fns';
 
 export async function runBudgetSet(amount: string, options: { monthly?: boolean } = {}): Promise<void> {
@@ -31,37 +31,28 @@ export async function runBudgetStatus(): Promise<void> {
   const remaining = getRemainingBudget();
 
   console.log();
-  console.log(chalk.bold.cyan('  Budget Status'));
+  console.log(chalk.bold.hex('#06b6d4')('  ◈ Budget Status'));
   printSeparator();
-
   console.log();
-  console.log(chalk.bold('  Spending:'));
-  printKeyValue('Total spent', `$${budget.totalSpent.toFixed(6)}`, 'yellow');
-  printKeyValue('This month', `$${budget.monthlySpent.toFixed(6)}`, 'yellow');
-  printKeyValue('This session', `$${budget.sessionSpent.toFixed(6)}`, 'yellow');
+
+  // Spending row
+  console.log(chalk.bold('  Spending'));
+  printKeyValue('Total spent',   `$${budget.totalSpent.toFixed(6)}`,   'yellow');
+  printKeyValue('This month',    `$${budget.monthlySpent.toFixed(6)}`,  'yellow');
+  printKeyValue('This session',  `$${budget.sessionSpent.toFixed(6)}`,  'yellow');
 
   if (budget.totalLimit !== undefined || budget.monthlyLimit !== undefined) {
     console.log();
-    console.log(chalk.bold('  Limits:'));
+    console.log(chalk.bold('  Limits'));
     if (budget.totalLimit !== undefined) {
-      const pct = Math.min(100, (budget.totalSpent / budget.totalLimit) * 100);
-      const bar = createProgressBar(pct);
-      printKeyValue('Total limit', `$${budget.totalLimit} ${bar} ${pct.toFixed(1)}%`, 'cyan');
-      if (remaining.total !== undefined) {
-        printKeyValue('Remaining', `$${remaining.total.toFixed(6)}`, remaining.total < 1 ? 'yellow' : 'green');
-      }
+      showBudgetBar(budget.totalSpent, budget.totalLimit, 'Total');
     }
     if (budget.monthlyLimit !== undefined) {
-      const pct = Math.min(100, (budget.monthlySpent / budget.monthlyLimit) * 100);
-      const bar = createProgressBar(pct);
-      printKeyValue('Monthly limit', `$${budget.monthlyLimit} ${bar} ${pct.toFixed(1)}%`, 'cyan');
-      if (remaining.monthly !== undefined) {
-        printKeyValue('Monthly remaining', `$${remaining.monthly.toFixed(6)}`, remaining.monthly < 1 ? 'yellow' : 'green');
-      }
+      showBudgetBar(budget.monthlySpent, budget.monthlyLimit, 'Monthly');
     }
   } else {
     console.log();
-    showInfo('No budget limits set. Use "cude budget set <amount>" to set one.');
+    showInfo('No limits set.  cude budget set 10');
   }
 
   if (Object.keys(budget.perProviderSpent).length > 0) {
