@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" width="800" height="320" role="img" aria-label="Cude Code banner">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#16162a"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="50%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="800" height="320" fill="url(#bgGrad)" rx="16"/>
+
+  <!-- Logo hexagon (left side) -->
+  <g transform="translate(160, 130) scale(0.5)">
+    <path d="M0 -120 L104 -60 L104 60 L0 120 L-104 60 L-104 -60 Z"
+          fill="none" stroke="#ffffff" stroke-width="18" stroke-linejoin="round" filter="url(#glow)"/>
+    <path d="M30 -60 A60 60 0 1 0 30 60"
+          fill="none" stroke="#ffffff" stroke-width="20" stroke-linecap="round"/>
+    <path d="M-16 -28 L20 0 L-16 28"
+          fill="none" stroke="#ffffff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- CUDE CODE text -->
+  <text x="400" y="150" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="64" font-weight="800" letter-spacing="12" fill="url(#textGrad)" filter="url(#glow)">CUDE CODE</text>
+
+  <!-- Tagline -->
+  <text x="400" y="195" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" fill="#888888" letter-spacing="4">PROFESSIONAL AI DEVELOPMENT CLI</text>
+
+  <!-- Feature badges -->
+  <text x="400" y="250" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="14" fill="#555555" letter-spacing="2">19 PROVIDERS · 22 TOOLS · BROWSER · RAG · SESSIONS · BUDGET</text>
+</svg>

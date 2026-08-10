@@ -2,32 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.1.0] - 2026-08-10
+## [0.1.0] - 2026-08-10
 
-### ✨ Features
-- **16 agent tools** (up from 13): added `move_file` (rename), `diff_files` (file comparison), and `apply_patch` (multi-hunk unified diff)
-- **Multi-occurrence edits**: `replace_in_file` now supports `replace_all` to replace every occurrence in a single call
-- **Environment variable fallback for API keys**: `CUDE_<PROVIDER>_KEY` and provider-conventional names (e.g. `OPENAI_API_KEY`) are now read at runtime when no stored key exists
-- **New task types**: `general` and `writing` are now first-class selector branches (previously fell through to the generic fallback)
-- **Full provider parity in config**: `cude config set-key`, the setup wizard, and `config list-keys` now accept all 19 providers (azure, litellm, huggingface, vllm, replicate, gguf were previously rejected)
-- **Automatic data migration**: on first launch, Cude Code moves any legacy `~/.codiente` directory to `~/.cude` (idempotent, best-effort)
-- **Branded banner**: version, tool/task counts, and support contact are shown on startup
+### New Features
+- **Browser automation tools**: `browser_navigate`, `browser_screenshot`, `browser_extract` powered by Playwright for headless web interaction
+- **Native RAG**: `rag_index`, `rag_search`, `rag_summary` for in-memory keyword-based search across local codebases
+- **22 agent tools** (up from 16): added 3 browser tools and 3 RAG tools
+- **Brand identity**: custom ASCII logo in terminal, SVG banner and logo for GitHub
 
-### 🐛 Fixes
-- Resolved the split-brain between the public brand (`cude`) and the on-disk storage folder (`~/.codiente`); everything now lives under `~/.cude`
-- Removed 28 stale `codiente` references across user-facing provider error messages and command hints
-- Corrected `README` config-path documentation to match the real storage locations
-- Removed the dead `desktop` command (Electron app was already removed) and cleaned up the `Codiente Agent` header
+### Breaking Changes
+- Version reset from 1.1.0 to 0.1.0 to reflect proper semver for pre-1.0 development
 
-### 🧹 Chores
-- Added `.npmignore` so `npm publish` ships `dist/` while excluding source and docs
-- Added `repository`, `homepage`, and `bugs` metadata pointing at the GitHub repo
-- Updated support contact to `zgremre@gmail.com`
-- Added `assets/logo.svg`
+### Inherited from 1.1.0
+- **16 core agent tools**: `move_file` (rename), `diff_files` (file comparison), `apply_patch` (multi-hunk unified diff)
+- **Multi-occurrence edits**: `replace_in_file` supports `replace_all`
+- **Environment variable fallback for API keys**: `CUDE_<PROVIDER>_KEY` and provider-conventional names
+- **9 task types**: `code`, `quick`, `complex`, `general`, `analysis`, `writing`, `research`, `reasoning`, `cheap`
+- **Full provider parity in config**: all 19 providers supported
+- **Automatic data migration**: legacy `~/.codiente` to `~/.cude`
 
 ## [1.0.0] - 2025-01-01
 
-### 🚀 Initial release
+### Initial release
 - Multi-provider support (19 AI providers: OpenAI, Anthropic, Google Gemini, DeepSeek, Groq, Ollama, vLLM, LiteLLM, and more)
 - Interactive chat mode with streaming and markdown rendering
 - Autonomous agent with tool use (read/write/replace/delete/copy files, list/create directories, search, grep, run commands, git, npm)

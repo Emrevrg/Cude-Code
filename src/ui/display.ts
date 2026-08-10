@@ -1,27 +1,36 @@
 import chalk from 'chalk';
 import boxen from 'boxen';
-import figlet from 'figlet';
 import gradientString from 'gradient-string';
 import { marked } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import type { Provider } from '../providers/types.js';
 import type { Session } from '../storage/sessions.js';
 
-// Configure marked with terminal renderer
 marked.use(markedTerminal() as Parameters<typeof marked.use>[0]);
 
-export function showBanner(): void {
-  const art = figlet.textSync('CUDE', {
-    font: 'Standard',
-    horizontalLayout: 'default',
-  });
+const LOGO_ART = `
+    ╭──────────╮
+   ╱            ╲
+  ╱   ╭──╮       ╲
+ │    │ ╲╱   ╲>    │
+ │    │  ╱    ╱    │
+  ╲   ╰──╯       ╱
+   ╲            ╱
+    ╰────┬┬────╯
+         ││`;
 
+export function showBanner(): void {
   const gradient = gradientString('cyan', 'magenta', 'blue');
-  console.log(gradient(art));
-  console.log(chalk.cyan.bold('C') + chalk.magenta.bold('U') + chalk.blue.bold('D') + chalk.cyan.bold('E ') + chalk.white('Code') + chalk.dim('  v1.1.0'));
+  console.log(gradient(LOGO_ART));
+  console.log();
+  console.log(
+    '  ' +
+    chalk.cyan.bold('C') + chalk.magenta.bold('U') + chalk.blue.bold('D') + chalk.cyan.bold('E') +
+    chalk.white.bold(' CODE') +
+    chalk.dim('  v0.1.0')
+  );
   console.log(chalk.dim('  Professional open-source AI Development CLI'));
-  console.log(chalk.dim('  19 providers · 16 tools · 9 task types · budget tracking · sessions'));
-  console.log(chalk.dim('  Support: zgremre@gmail.com'));
+  console.log(chalk.dim('  19 providers · 22 tools · 9 task types · browser · RAG'));
   console.log();
 }
 
@@ -206,7 +215,7 @@ export function formatCost(cost: number): string {
 
 export function showQuickTips(): void {
   console.log();
-  console.log(chalk.bold.cyan('💡 Quick Tips:'));
+  console.log(chalk.bold.cyan('Quick Tips:'));
   console.log(chalk.dim('  • Start with: cude chat --free    # Use free providers'));
   console.log(chalk.dim('  • Customize:  cude config setup   # Configure API keys'));
   console.log(chalk.dim('  • Run tasks:  cude run "prompt"   # Use autonomous agent'));
@@ -216,7 +225,7 @@ export function showQuickTips(): void {
 
 export function showGettingStarted(): void {
   console.log();
-  console.log(chalk.bold.cyan('🚀 Getting Started:'));
+  console.log(chalk.bold.cyan('Getting Started:'));
   console.log();
   console.log(chalk.white('1. Configure API Keys:'));
   console.log(chalk.cyan('   cude setup'));
@@ -242,23 +251,20 @@ export function showStep(step: number, total: number, message: string): void {
 }
 
 export function showTable(headers: string[], rows: string[][], colors?: string[]): void {
-  const columnWidths = headers.map((h, i) => 
+  const columnWidths = headers.map((h, i) =>
     Math.max(h.length, Math.max(...rows.map(r => r[i]?.length ?? 0)))
   );
 
-  // Print header
   const headerRow = headers.map((h, i) => h.padEnd(columnWidths[i])).join('  ');
   console.log(chalk.bold.cyan(headerRow));
   console.log(chalk.dim('─'.repeat(columnWidths.reduce((a, w) => a + w + 2, 0))));
 
-  // Print rows
   for (const row of rows) {
     const formattedRow = row.map((cell, i) => {
       const padded = cell.padEnd(columnWidths[i]);
       const color = colors?.[i];
       if (!color) return padded;
-      
-      // Apply color based on the color name
+
       switch (color) {
         case 'cyan': return chalk.cyan(padded);
         case 'green': return chalk.green(padded);
