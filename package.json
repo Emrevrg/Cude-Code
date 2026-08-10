@@ -1,63 +1,50 @@
 {
   "name": "cude-code",
-  "version": "1.1.0",
-  "description": "Professional open-source CLI AI Development Tool with 19 providers, 16 agent tools, sessions, and budget tracking",
-  "author": "Cude Code Contributors <zgremre@gmail.com>",
-  "license": "MIT",
-  "homepage": "https://github.com/Emrevrg/Cude-Code",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Emrevrg/Cude-Code.git"
-  },
-  "bugs": {
-    "url": "https://github.com/Emrevrg/Cude-Code/issues",
-    "email": "zgremre@gmail.com"
-  },
+  "version": "1.0.0",
+  "description": "AI-powered coding agent — code, automate, and ship faster",
   "bin": {
     "cude": "./dist/index.js"
   },
   "type": "module",
-  "main": "dist/index.js",
-  "exports": {
-    ".": "./dist/index.js"
-  },
+  "main": "dist-electron/electron/main.js",
+  "files": [
+    "dist/",
+    "dist-electron/",
+    "dist-renderer/",
+    "electron/",
+    "renderer/src",
+    "renderer/index.html",
+    "renderer/package.json",
+    "renderer/vite.config.ts",
+    "renderer/tailwind.config.js",
+    "renderer/postcss.config.js",
+    "renderer/tsconfig.json"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
-    "prepublishOnly": "npm run build",
-    "prepack": "npm run build",
-    "lint": "eslint src --ext .ts",
-    "type-check": "tsc --noEmit",
-    "test": "echo 'Tests coming soon'",
-    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
-  },
-  "keywords": [
-    "ai",
-    "cli",
-    "code-generation",
-    "openai",
-    "anthropic",
-    "terminal",
-    "development",
-    "automation",
-    "agent"
-  ],
-  "engines": {
-    "node": ">=18.0.0"
+    "postinstall": "node scripts/postinstall.mjs",
+    "prepublishOnly": "npm run build && npm run build:desktop",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "build:renderer": "cd renderer && npm install --silent && npm run build",
+    "build:desktop": "npm run build:electron && npm run build:renderer",
+    "build:all": "npm run build && npm run build:desktop",
+    "package:win": "electron-builder --win",
+    "package:mac": "electron-builder --mac",
+    "package:linux": "electron-builder --linux",
+    "package:all": "electron-builder --win --mac --linux",
+    "release": "npm run build && electron-builder --publish always",
+    "dev:desktop": "concurrently \"cd renderer && npm run dev\" \"wait-on http://localhost:5173 && electron dist-electron/electron/main.js\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
     "@google/generative-ai": "^0.21.0",
-    "@xenova/transformers": "^2.6.0",
     "boxen": "^7.1.1",
     "chalk": "^5.3.0",
-    "cli-table3": "^0.6.3",
     "commander": "^12.1.0",
     "conf": "^13.0.1",
     "date-fns": "^3.6.0",
-    "dotenv": "^16.3.1",
-    "execa": "^8.0.1",
     "figlet": "^1.8.0",
     "gradient-string": "^2.0.2",
     "inquirer": "^9.3.7",
@@ -65,19 +52,89 @@
     "marked-terminal": "^7.2.1",
     "openai": "^4.76.0",
     "ora": "^8.1.1",
-    "playwright": "^1.40.0",
-    "simple-git": "^3.21.0",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
     "@types/figlet": "^1.5.8",
     "@types/inquirer": "^9.0.9",
-    "@types/node": "^22.10.0",
+    "@types/node": "^22.20.1",
     "@types/uuid": "^10.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.15.0",
-    "@typescript-eslint/parser": "^6.15.0",
-    "eslint": "^8.56.0",
+    "concurrently": "^9.2.1",
+    "electron": "^34.5.8",
+    "electron-builder": "^25.1.8",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "wait-on": "^8.0.5"
+  },
+  "build": {
+    "appId": "dev.codiente.app",
+    "productName": "Codiente",
+    "copyright": "Copyright © 2025 Codiente",
+    "directories": {
+      "output": "dist-packages",
+      "buildResources": "build-assets"
+    },
+    "files": [
+      "dist-electron/**/*",
+      "dist-renderer/**/*",
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist/",
+        "to": "app/dist/"
+      }
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.developer-tools",
+      "darkModeSupport": true,
+      "icon": "build-assets/icon.icns"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "publisherName": "Codiente",
+      "icon": "build-assets/icon.ico"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Development",
+      "icon": "build-assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "emrevrg",
+      "repo": "codiente-cli"
+    }
   }
 }

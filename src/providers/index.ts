@@ -12,11 +12,15 @@ import { DeepSeekProvider } from './deepseek.js';
 import { XAIProvider } from './xai.js';
 import { CohereProvider } from './cohere.js';
 import { AzureOpenAIProvider } from './azure.js';
-import { LiteLLMProvider } from './litellm.js';
-import { HuggingFaceProvider } from './huggingface.js';
+import { GLMProvider } from './glm.js';
+import { LMStudioProvider } from './lmstudio.js';
 import { VLLMProvider } from './vllm.js';
+import { LiteLLMProvider } from './litellm.js';
 import { ReplicateProvider } from './replicate.js';
-import { LocalGGUFProvider } from './gguf.js';
+import { HuggingFaceProvider } from './huggingface.js';
+import { SGLangProvider } from './sglang.js';
+import { BedrockProvider } from './bedrock.js';
+import { OpenAICompatibleProvider } from './openai_compatible.js';
 import type { Provider } from './types.js';
 
 const providers: Provider[] = [
@@ -34,11 +38,15 @@ const providers: Provider[] = [
   new XAIProvider(),
   new CohereProvider(),
   new AzureOpenAIProvider(),
-  new LiteLLMProvider(),
-  new HuggingFaceProvider(),
+  new GLMProvider(),
+  new LMStudioProvider(),
   new VLLMProvider(),
+  new LiteLLMProvider(),
   new ReplicateProvider(),
-  new LocalGGUFProvider(),
+  new HuggingFaceProvider(),
+  new SGLangProvider(),
+  new BedrockProvider(),
+  new OpenAICompatibleProvider(),
 ];
 
 export function getProvider(name: string): Provider {
@@ -59,13 +67,9 @@ export function getConfiguredProviders(): Provider[] {
 
 export function getFreeProviders(): Provider[] {
   return providers.filter(
-    p => p.name === 'groq' || 
-         p.name === 'ollama' || 
-         p.name === 'gemini' || 
-         p.name === 'openrouter' ||
-         p.name === 'litellm' ||
-         p.name === 'vllm' ||
-         p.name === 'gguf'
+    p => p.name === 'groq' || p.name === 'ollama' || p.name === 'gemini' || p.name === 'openrouter'
+      || p.name === 'lmstudio' || p.name === 'vllm' || p.name === 'sglang' || p.name === 'glm'
+      || p.name === 'huggingface'
   );
 }
 
@@ -85,9 +89,13 @@ export {
   XAIProvider,
   CohereProvider,
   AzureOpenAIProvider,
-  LiteLLMProvider,
-  HuggingFaceProvider,
+  GLMProvider,
+  LMStudioProvider,
   VLLMProvider,
+  LiteLLMProvider,
   ReplicateProvider,
-  LocalGGUFProvider,
+  HuggingFaceProvider,
+  SGLangProvider,
+  BedrockProvider,
+  OpenAICompatibleProvider,
 };
