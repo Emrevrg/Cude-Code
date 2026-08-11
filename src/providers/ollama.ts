@@ -9,6 +9,12 @@ import type {
   ModelInfo,
 } from './types.js';
 
+import { fetchProvider } from './net.js';
+
+// Reports an unreachable endpoint instead of a bare "fetch failed".
+const fetchOllama = (url: string, init?: RequestInit): Promise<Response> =>
+  fetchProvider(url, init, 'Ollama', 'Start it with: ollama serve');
+
 interface OllamaModel {
   name: string;
   modified_at: string;
@@ -37,7 +43,7 @@ export class OllamaProvider implements Provider {
 
   async isAvailable(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.getBaseUrl()}/api/tags`, {
+      const response = await fetchOllama(`${this.getBaseUrl()}/api/tags`, {
         signal: AbortSignal.timeout(3000),
       });
       return response.ok;
@@ -48,7 +54,7 @@ export class OllamaProvider implements Provider {
 
   async getInstalledModels(): Promise<OllamaModel[]> {
     try {
-      const response = await fetch(`${this.getBaseUrl()}/api/tags`);
+      const response = await fetchOllama(`${this.getBaseUrl()}/api/tags`);
       if (!response.ok) return [];
       const data = await response.json() as { models: OllamaModel[] };
       return data.models ?? [];
@@ -93,7 +99,7 @@ export class OllamaProvider implements Provider {
     const ollamaModel = model.replace('ollama/', '');
     const prompt = this.buildPrompt(messages, options.systemPrompt);
 
-    const response = await fetch(`${this.getBaseUrl()}/api/generate`, {
+    const response = await fetchOllama(`${this.getBaseUrl()}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -128,7 +134,7 @@ export class OllamaProvider implements Provider {
     const ollamaModel = model.replace('ollama/', '');
     const prompt = this.buildPrompt(messages, options.systemPrompt);
 
-    const response = await fetch(`${this.getBaseUrl()}/api/generate`, {
+    const response = await fetchOllama(`${this.getBaseUrl()}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
