@@ -1,16 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" width="800" height="320" role="img" aria-label="Cude Code banner">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400" role="img" aria-label="Cude Code banner">
   <defs>
     <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0a0a0a"/>
-      <stop offset="100%" stop-color="#16162a"/>
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="50%" stop-color="#0d0d1a"/>
+      <stop offset="100%" stop-color="#0a0a0f"/>
     </linearGradient>
-    <linearGradient id="textGrad" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#22d3ee"/>
-      <stop offset="50%" stop-color="#a855f7"/>
-      <stop offset="100%" stop-color="#3b82f6"/>
+    <linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#818cf8"/>
     </linearGradient>
     <filter id="glow">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
       <feMerge>
         <feMergeNode in="blur"/>
         <feMergeNode in="SourceGraphic"/>
@@ -18,24 +25,95 @@
     </filter>
   </defs>
 
-  <rect width="800" height="320" fill="url(#bgGrad)" rx="16"/>
+  <!-- Background -->
+  <rect width="1200" height="400" fill="url(#bgGrad)"/>
 
-  <!-- Logo hexagon (left side) -->
-  <g transform="translate(160, 130) scale(0.5)">
-    <path d="M0 -120 L104 -60 L104 60 L0 120 L-104 60 L-104 -60 Z"
-          fill="none" stroke="#ffffff" stroke-width="18" stroke-linejoin="round" filter="url(#glow)"/>
-    <path d="M30 -60 A60 60 0 1 0 30 60"
-          fill="none" stroke="#ffffff" stroke-width="20" stroke-linecap="round"/>
-    <path d="M-16 -28 L20 0 L-16 28"
-          fill="none" stroke="#ffffff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Subtle grid lines -->
+  <line x1="0" y1="380" x2="1200" y2="380" stroke="#1a1a2e" stroke-width="1"/>
+  <line x1="0" y1="20" x2="1200" y2="20" stroke="#1a1a2e" stroke-width="1"/>
+
+  <!-- Left logo (small) -->
+  <g transform="translate(100, 100) scale(0.35)">
+    <!-- Hexagon -->
+    <path d="M128 10 L240 75 L240 200 L165 240 L155 230 L128 248 L101 230 L91 240 L16 200 L16 75 Z"
+          fill="none" stroke="#ffffff" stroke-width="16" stroke-linejoin="round" stroke-linecap="round" filter="url(#glow)"/>
+    <!-- C arc -->
+    <path d="M175 80 A55 55 0 1 0 175 180" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round"/>
+    <!-- > chevron -->
+    <path d="M118 108 L148 130 L118 152" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 
-  <!-- CUDE CODE text -->
-  <text x="400" y="150" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="64" font-weight="800" letter-spacing="12" fill="url(#textGrad)" filter="url(#glow)">CUDE CODE</text>
+  <!-- CUDE CODE title -->
+  <text x="235" y="142" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="72" font-weight="800" fill="#ffffff" letter-spacing="8" filter="url(#glow)">CUDE CODE</text>
 
-  <!-- Tagline -->
-  <text x="400" y="195" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" fill="#888888" letter-spacing="4">PROFESSIONAL AI DEVELOPMENT CLI</text>
+  <!-- Tagline: YAZ. ANLA. URET. -->
+  <text x="237" y="185" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="22" font-weight="600" letter-spacing="6">
+    <tspan fill="#999999">YAZ.</tspan>
+    <tspan fill="#999999" dx="6">ANLA.</tspan>
+    <tspan fill="url(#accentGrad)" dx="6">URET.</tspan>
+  </text>
 
-  <!-- Feature badges -->
-  <text x="400" y="250" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="14" fill="#555555" letter-spacing="2">19 PROVIDERS · 22 TOOLS · BROWSER · RAG · SESSIONS · BUDGET</text>
+  <!-- Description -->
+  <text x="237" y="225" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="15" fill="#666666" letter-spacing="1">AI destekli yeni nesil CLI kodlama asistani.</text>
+  <text x="237" y="248" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="15" fill="#666666" letter-spacing="1">Terminalinden cikmadan uretkenligini katla.</text>
+
+  <!-- Feature badges row -->
+  <!-- Terminal -->
+  <g transform="translate(140, 290)">
+    <text x="0" y="0" font-family="monospace" font-size="16" fill="#6366f1">&gt;_</text>
+    <text x="0" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#cccccc">Terminal</text>
+    <text x="0" y="35" font-family="system-ui, sans-serif" font-size="10" fill="#555555">Komut satirindan</text>
+    <text x="0" y="48" font-family="system-ui, sans-serif" font-size="10" fill="#555555">tam kontrol.</text>
+  </g>
+
+  <!-- AI -->
+  <g transform="translate(300, 290)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="14" fill="#6366f1">&#x26A1;</text>
+    <text x="0" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#cccccc">AI Destekli</text>
+    <text x="0" y="35" font-family="system-ui, sans-serif" font-size="10" fill="#555555">19 provider,</text>
+    <text x="0" y="48" font-family="system-ui, sans-serif" font-size="10" fill="#555555">22 tool.</text>
+  </g>
+
+  <!-- Productivity -->
+  <g transform="translate(460, 290)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="14" fill="#6366f1">&#x2B22;</text>
+    <text x="0" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#cccccc">Browser + RAG</text>
+    <text x="0" y="35" font-family="system-ui, sans-serif" font-size="10" fill="#555555">Web otomasyon,</text>
+    <text x="0" y="48" font-family="system-ui, sans-serif" font-size="10" fill="#555555">yerel arama.</text>
+  </g>
+
+  <!-- Security -->
+  <g transform="translate(640, 290)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="14" fill="#6366f1">&#x1F512;</text>
+    <text x="0" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#cccccc">Guvenli</text>
+    <text x="0" y="35" font-family="system-ui, sans-serif" font-size="10" fill="#555555">Kodlarin sadece</text>
+    <text x="0" y="48" font-family="system-ui, sans-serif" font-size="10" fill="#555555">sende kalir.</text>
+  </g>
+
+  <!-- Right side: large glowing logo -->
+  <g transform="translate(900, 120) scale(0.7)" opacity="0.15" filter="url(#softGlow)">
+    <path d="M128 10 L240 75 L240 200 L165 240 L155 230 L128 248 L101 230 L91 240 L16 200 L16 75 Z"
+          fill="none" stroke="#6366f1" stroke-width="14" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M175 80 A55 55 0 1 0 175 180" fill="none" stroke="#6366f1" stroke-width="16" stroke-linecap="round"/>
+    <path d="M118 108 L148 130 L118 152" fill="none" stroke="#6366f1" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Bottom right text -->
+  <text x="1060" y="355" text-anchor="end" font-family="system-ui, sans-serif" font-size="13" fill="#444444" letter-spacing="2">Kodlama artik</text>
+  <text x="1060" y="375" text-anchor="end" font-family="system-ui, sans-serif" font-size="13" letter-spacing="2">
+    <tspan fill="url(#accentGrad)">komutun</tspan>
+    <tspan fill="#444444"> kadar yakin.</tspan>
+  </text>
+
+  <!-- Terminal prompt bottom left -->
+  <g transform="translate(140, 370)">
+    <text font-family="monospace" font-size="12" fill="#333333">&gt;_ cude code --help</text>
+  </g>
+
+  <!-- Bottom right badge -->
+  <g transform="translate(1080, 350)">
+    <text x="0" y="0" font-family="monospace" font-size="11" fill="#333333">&gt;_</text>
+    <text x="20" y="0" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#444444">CUDE CODE</text>
+    <text x="20" y="15" font-family="system-ui, sans-serif" font-size="9" fill="#333333" letter-spacing="1">AI-POWERED CLI</text>
+  </g>
 </svg>

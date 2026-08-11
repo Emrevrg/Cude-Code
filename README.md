@@ -1,9 +1,11 @@
 <p align="center">
-  <img src="./assets/banner.svg" alt="Cude Code" width="700">
+  <img src="./assets/banner.svg" alt="Cude Code — YAZ. ANLA. URET." width="900">
 </p>
 
 <p align="center">
-  <img src="./assets/logo.svg" alt="Cude Code logo" width="120" height="120">
+  <a href="https://github.com/Emrevrg/Cude-Code">
+    <img src="./assets/logo.svg" alt="Cude Code logo" width="100" height="100">
+  </a>
 </p>
 
 # Cude Code - Professional AI Development CLI

@@ -8,16 +8,18 @@ import type { Session } from '../storage/sessions.js';
 
 marked.use(markedTerminal() as Parameters<typeof marked.use>[0]);
 
-const LOGO_ART = `
-    ╭──────────╮
-   ╱            ╲
-  ╱   ╭──╮       ╲
- │    │ ╲╱   ╲>    │
- │    │  ╱    ╱    │
-  ╲   ╰──╯       ╱
-   ╲            ╱
-    ╰────┬┬────╯
-         ││`;
+const LOGO_ART =
+  '        ╭─────────╮\n' +
+  '       ╱           ╲\n' +
+  '      ╱  ╭───╮      ╲\n' +
+  '     │   │    ╲       │\n' +
+  '     │   │     ╲>     │\n' +
+  '     │   │     ╱>     │\n' +
+  '     │   │    ╱       │\n' +
+  '      ╲  ╰───╯      ╱\n' +
+  '       ╲           ╱\n' +
+  '        ╰──╮  ╭──╯\n' +
+  '           │  │';
 
 export function showBanner(): void {
   const gradient = gradientString('cyan', 'magenta', 'blue');
