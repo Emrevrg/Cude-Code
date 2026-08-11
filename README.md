@@ -8,6 +8,10 @@
   </a>
 </p>
 
+<p align="center">
+  <img src="./assets/cli-preview.png" alt="Cude Code CLI Preview" width="600">
+</p>
+
 # Cude Code - Professional AI Development CLI
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
