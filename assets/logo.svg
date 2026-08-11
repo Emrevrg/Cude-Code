@@ -1,26 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Cude Code logo">
-  <rect width="512" height="512" fill="#000000"/>
+  <title>Cude Code</title>
 
-  <!-- Hexagon outer shape with bottom notch -->
-  <path d="
-    M256 52
-    L440 158
-    L440 340
-    L290 426
-    L270 410
-    L256 426
-    L242 410
-    L222 426
-    L72 340
-    L72 158
-    Z
-  " fill="none" stroke="#ffffff" stroke-width="28" stroke-linejoin="round" stroke-linecap="round"/>
+  <g fill="none" stroke="#ffffff" stroke-width="42" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Hexagon opened on the right side: this forms the "C".
+         Runs from the upper-right vertex counter-clockwise around to
+         the left leg of the bottom notch. -->
+    <path d="M 429 156 L 256 56 L 83 156 L 83 356 L 230 441 L 230 470"/>
 
-  <!-- C shape - left arc opening to the right -->
-  <path d="M310 170 A90 90 0 1 0 310 342"
-        fill="none" stroke="#ffffff" stroke-width="32" stroke-linecap="round"/>
+    <!-- Right leg of the bottom notch, sweeping up to the lower-right vertex. -->
+    <path d="M 282 470 L 282 441 L 429 356"/>
 
-  <!-- > chevron inside -->
-  <path d="M228 210 L288 256 L228 302"
-        fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- ">" chevron inside the mark -->
+    <path d="M 205 190 L 300 256 L 205 322" stroke-width="38"/>
+  </g>
 </svg>

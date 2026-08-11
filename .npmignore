@@ -1,6 +1,7 @@
 # Source files — not needed in the published package
 src/
 assets/
+tools/
 
 # Docs
 *.md

@@ -1,15 +1,9 @@
 <p align="center">
-  <img src="./assets/banner.svg" alt="Cude Code — YAZ. ANLA. URET." width="900">
+  <img src="./assets/banner.svg" alt="Cude Code — YAZ. ANLA. ÜRET." width="900">
 </p>
 
 <p align="center">
-  <a href="https://github.com/Emrevrg/Cude-Code">
-    <img src="./assets/logo.svg" alt="Cude Code logo" width="100" height="100">
-  </a>
-</p>
-
-<p align="center">
-  <img src="./assets/cli-preview.png" alt="Cude Code CLI Preview" width="600">
+  <img src="./assets/cli-preview.png" alt="Cude Code running in the terminal" width="620">
 </p>
 
 # Cude Code - Professional AI Development CLI
