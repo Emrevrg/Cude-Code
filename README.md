@@ -11,7 +11,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
-[![npm](https://img.shields.io/npm/v/cude-code)](https://www.npmjs.com/package/cude-code)
 [![Status](https://img.shields.io/badge/Status-v0.1.0%20Early%20Release-blue)](./CHANGELOG.md)
 
 **The professional, multi-provider AI development CLI for your terminal**
@@ -19,7 +18,8 @@
 Cude Code is a feature-rich CLI tool for AI-assisted development. It supports 19 AI providers, 22 agent tools, browser automation, native RAG, and brings professional capabilities to your terminal.
 
 ```bash
-npm install -g cude-code
+git clone https://github.com/Emrevrg/Cude-Code.git
+cd Cude-Code && npm install && npm run build && npm link
 cude chat
 ```
 
@@ -39,8 +39,16 @@ cude chat
 ## Quick Start
 
 ### 1. Install
+
+Not on npm yet. Install from source — this builds the CLI and puts `cude` on
+your PATH:
+
 ```bash
-npm install -g cude-code
+git clone https://github.com/Emrevrg/Cude-Code.git
+cd Cude-Code
+npm install
+npm run build
+npm link
 ```
 
 Optional — only needed for the three browser tools:
