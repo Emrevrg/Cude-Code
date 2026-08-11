@@ -37,6 +37,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Browser tests skip themselves when Chromium is absent, which it is
+      # here — the download is deliberately skipped above.
+      - name: Test
+        run: npm run test:only
+
       - name: Verify the CLI starts and reports its version
         run: |
           test "$(node dist/index.js --version)" = "$(node -p "require('./package.json').version")"
