@@ -83,7 +83,7 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
     console.log();
   }
 
-  let spinner = startSpinner('Starting agent...');
+  startSpinner('Starting agent...');
   let stepCount = 0;
 
   try {
@@ -103,7 +103,7 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
         stopSpinner(false);
         const confirmed = await getUserConfirmation(message);
         if (confirmed) {
-          spinner = startSpinner('Continuing...');
+          startSpinner('Continuing...');
         }
         return confirmed;
       },

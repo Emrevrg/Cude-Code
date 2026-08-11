@@ -3,7 +3,7 @@ import { selectProviderAndModel, type TaskType } from './selector.js';
 import { executeTool, TOOL_DEFINITIONS, setConfirmCallback, formatToolCall, formatToolResult } from './tools.js';
 import { recordSpending } from '../storage/budget.js';
 import { checkBudgetAlert } from '../storage/budget.js';
-import type { Message, ToolCall } from '../providers/types.js';
+import type { Message } from '../providers/types.js';
 
 export interface AgentOptions {
   task: string;
@@ -56,14 +56,12 @@ When you have completed the task, start your final response with "TASK COMPLETE:
 
 export async function runAgent(options: AgentOptions): Promise<AgentResult> {
   const {
-    task,
     taskType = 'code',
     free = false,
     provider: preferredProvider,
     model: preferredModel,
     maxIterations = 10,
     verbose = false,
-    onProgress,
     onConfirm,
   } = options;
 

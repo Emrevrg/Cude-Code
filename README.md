@@ -12,11 +12,11 @@
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 [![npm](https://img.shields.io/npm/v/cude-code)](https://www.npmjs.com/package/cude-code)
-[![Status](https://img.shields.io/badge/Status-Production%20Ready-green)](./PROJECT_STATUS.md)
+[![Status](https://img.shields.io/badge/Status-v0.1.0%20Early%20Release-blue)](./CHANGELOG.md)
 
 **The professional, multi-provider AI development CLI for your terminal**
 
-Cude Code is a production-ready, feature-rich CLI tool for AI-assisted development. It supports 19 AI providers, 22 agent tools, browser automation, native RAG, and brings professional capabilities to your terminal.
+Cude Code is a feature-rich CLI tool for AI-assisted development. It supports 19 AI providers, 22 agent tools, browser automation, native RAG, and brings professional capabilities to your terminal.
 
 ```bash
 npm install -g cude-code
@@ -41,6 +41,11 @@ cude chat
 ### 1. Install
 ```bash
 npm install -g cude-code
+```
+
+Optional — only needed for the three browser tools:
+```bash
+npx playwright install chromium
 ```
 
 ### 2. Setup

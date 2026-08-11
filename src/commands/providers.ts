@@ -7,7 +7,7 @@ import { OllamaProvider } from '../providers/ollama.js';
 
 export async function runProvidersList(): Promise<void> {
   const providers = listProviders();
-  const spinner = startSpinner('Checking provider availability...');
+  startSpinner('Checking provider availability...');
 
   const results = await Promise.all(
     providers.map(async (provider) => {
@@ -38,7 +38,7 @@ export async function runProvidersTest(): Promise<void> {
   console.log();
 
   for (const provider of providers) {
-    const spinner = startSpinner(`Testing ${provider.displayName}...`);
+    startSpinner(`Testing ${provider.displayName}...`);
     try {
       const available = await provider.isAvailable();
       if (available) {
@@ -56,7 +56,7 @@ export async function runProvidersTest(): Promise<void> {
   // Test Ollama models if available
   const ollamaProvider = providers.find(p => p.name === 'ollama') as OllamaProvider | undefined;
   if (ollamaProvider) {
-    const spinner = startSpinner('Checking Ollama models...');
+    startSpinner('Checking Ollama models...');
     try {
       const available = await ollamaProvider.isAvailable();
       if (available) {

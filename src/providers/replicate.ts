@@ -83,7 +83,7 @@ export class ReplicateProvider implements Provider {
     }
 
     const prediction = await response.json() as any;
-    let predictionId = prediction.id;
+    const predictionId = prediction.id;
 
     // Poll for completion
     while (prediction.status === 'processing') {

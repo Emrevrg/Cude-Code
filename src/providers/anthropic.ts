@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getApiKey } from '../config/index.js';
-import { calculateCost, estimateTokens, getModelsByProvider } from '../config/models.js';
+import { calculateCost, getModelsByProvider } from '../config/models.js';
 import type {
   Provider,
   Message,

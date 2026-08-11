@@ -78,7 +78,24 @@ async function getBrowser() {
       throw new Error('Playwright is not installed. Run: npm install playwright');
     }
   }
-  return browserModule.chromium.launch({ headless: true });
+
+  try {
+    return await browserModule.chromium.launch({ headless: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    // Playwright ships as a dependency, but the browser binaries are a separate
+    // ~150 MB download that can be skipped or fail behind a proxy. Without this
+    // the user just gets Playwright's raw stack trace.
+    if (/Executable doesn't exist|please run the following command/i.test(message)) {
+      throw new Error(
+        'Chromium is not installed for Playwright. Run:\n' +
+        '  npx playwright install chromium\n' +
+        'Browser tools (browser_navigate, browser_screenshot, browser_extract) ' +
+        'need it; the rest of Cude Code works without it.'
+      );
+    }
+    throw err;
+  }
 }
 
 export async function executeBrowserTool(
