@@ -73,7 +73,7 @@ body{margin:0;padding:44px;background:#12121c;display:flex;justify-content:cente
 .d{width:12px;height:12px;border-radius:50%}
 .t{flex:1;text-align:center;color:#5a5a6a;font-size:12.5px;margin-right:52px;
  font-family:Inter,system-ui,sans-serif}
-.body{padding:18px 24px 22px;font-size:14px;line-height:1.36;letter-spacing:.2px;color:#c9c9d6}
+.body{padding:18px 24px 22px;font-size:14px;line-height:1.18;letter-spacing:0;color:#c9c9d6}
 .p{margin-bottom:8px}
 pre{margin:0;font:inherit;white-space:pre}
 </style></head><body>
