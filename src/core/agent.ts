@@ -19,6 +19,7 @@ export interface AgentOptions {
 
 export interface AgentResult {
   success: boolean;
+  stopReason: 'completed' | 'max_iterations' | 'budget_exceeded' | 'empty_output';
   output: string;
   totalCost: number;
   totalInputTokens: number;
@@ -107,6 +108,7 @@ async function runToolsAgent(
   let iterations = 0;
   const steps: AgentStep[] = [];
   let finalOutput = '';
+  let stopReason: AgentResult['stopReason'] = 'max_iterations';
 
   while (iterations < maxIterations) {
     iterations++;
@@ -115,6 +117,7 @@ async function runToolsAgent(
     const budgetCheck = checkBudgetAlert();
     if (budgetCheck.exceeded) {
       finalOutput = `Budget exceeded: ${budgetCheck.message}`;
+      stopReason = 'budget_exceeded';
       break;
     }
 
@@ -143,6 +146,7 @@ async function runToolsAgent(
     // If no tool calls, we're done
     if (toolCalls.length === 0) {
       finalOutput = response.content;
+      stopReason = response.content.trim().length > 0 ? 'completed' : 'empty_output';
       break;
     }
 
@@ -187,14 +191,21 @@ async function runToolsAgent(
     // Check if task is complete
     if (response.content.includes('TASK COMPLETE:') || response.content.includes('Task complete:')) {
       finalOutput = response.content;
+      stopReason = 'completed';
       break;
     }
   }
 
+  // Döngü tükenirse stopReason zaten 'max_iterations' (initial değer).
+  // finalOutput boşsa ek bir sorun var ama yine de döngü tükenmiş sayılır.
+
   steps.push({ type: 'final', content: finalOutput });
 
+  const success = stopReason === 'completed' && finalOutput.trim().length > 0;
+
   return {
-    success: true,
+    success,
+    stopReason,
     output: finalOutput,
     totalCost,
     totalInputTokens,
@@ -236,6 +247,7 @@ When done, start with "TASK COMPLETE:" to finish.`;
   let iterations = 0;
   const steps: AgentStep[] = [];
   let finalOutput = '';
+  let stopReason: AgentResult['stopReason'] = 'max_iterations';
 
   while (iterations < maxIterations) {
     iterations++;
@@ -243,6 +255,7 @@ When done, start with "TASK COMPLETE:" to finish.`;
     const budgetCheck = checkBudgetAlert();
     if (budgetCheck.exceeded) {
       finalOutput = `Budget exceeded: ${budgetCheck.message}`;
+      stopReason = 'budget_exceeded';
       break;
     }
 
@@ -312,6 +325,10 @@ When done, start with "TASK COMPLETE:" to finish.`;
 
       if (content.includes('TASK COMPLETE:') || content.includes('Task complete:') || iterations >= maxIterations - 1) {
         finalOutput = content;
+        const isComplete = content.includes('TASK COMPLETE:') || content.includes('Task complete:');
+        stopReason = isComplete
+          ? (content.trim().length > 0 ? 'completed' : 'empty_output')
+          : 'max_iterations';
         messages.push({ role: 'assistant', content });
         break;
       }
@@ -322,13 +339,16 @@ When done, start with "TASK COMPLETE:" to finish.`;
   }
 
   if (!finalOutput) {
-    finalOutput = messages[messages.length - 1]?.content ?? 'Task completed';
+    finalOutput = messages[messages.length - 1]?.content ?? '';
   }
 
   steps.push({ type: 'final', content: finalOutput });
 
+  const success = stopReason === 'completed' && finalOutput.trim().length > 0;
+
   return {
-    success: true,
+    success,
+    stopReason,
     output: finalOutput,
     totalCost,
     totalInputTokens,

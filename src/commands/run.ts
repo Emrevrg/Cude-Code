@@ -113,6 +113,14 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
 
     console.log();
 
+    if (!result.success) {
+      console.log(chalk.red(`  Task failed: ${result.stopReason}`));
+      if (result.output) {
+        console.log(chalk.dim(`  ${result.output}`));
+      }
+      console.log();
+    }
+
     if (verbose && result.steps.length > 0) {
       console.log(chalk.bold('  Execution Steps:'));
       for (const step of result.steps) {
@@ -143,6 +151,8 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
 
     if (result.success) {
       showSuccess(`Task completed in ${result.iterations} iteration${result.iterations !== 1 ? 's' : ''}`);
+    } else {
+      process.exitCode = 1;
     }
 
   } catch (err) {
