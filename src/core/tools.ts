@@ -4,6 +4,8 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import chalk from 'chalk';
 import type { ToolDefinition } from '../providers/types.js';
+import { BROWSER_TOOL_DEFINITIONS, executeBrowserTool } from './browser.js';
+import { RAG_TOOL_DEFINITIONS, executeRagTool } from './rag.js';
 
 const execAsync = promisify(exec);
 
@@ -294,6 +296,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ['path', 'patch'],
     },
   },
+  ...BROWSER_TOOL_DEFINITIONS,
+  ...RAG_TOOL_DEFINITIONS,
 ];
 
 // Commands that require confirmation
@@ -373,6 +377,16 @@ export async function executeTool(
 
     case 'apply_patch':
       return executeApplyPatch(args.path as string, args.patch as string);
+
+    case 'browser_navigate':
+    case 'browser_screenshot':
+    case 'browser_extract':
+      return executeBrowserTool(name, args);
+
+    case 'rag_index':
+    case 'rag_search':
+    case 'rag_summary':
+      return executeRagTool(name, args);
 
     default:
       return { success: false, output: '', error: `Unknown tool: ${name}` };

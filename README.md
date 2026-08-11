@@ -1,38 +1,48 @@
 <p align="center">
-  <img src="./assets/logo.svg" alt="Cude Code logo" width="160" height="160">
+  <img src="./assets/banner.svg" alt="Cude Code — YAZ. ANLA. URET." width="900">
 </p>
 
-# 🚀 Cude Code - Professional AI Development CLI
+<p align="center">
+  <a href="https://github.com/Emrevrg/Cude-Code">
+    <img src="./assets/logo.svg" alt="Cude Code logo" width="100" height="100">
+  </a>
+</p>
+
+<p align="center">
+  <img src="./assets/cli-preview.png" alt="Cude Code CLI Preview" width="600">
+</p>
+
+# Cude Code - Professional AI Development CLI
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 [![npm](https://img.shields.io/npm/v/cude-code)](https://www.npmjs.com/package/cude-code)
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-green)](./PROJECT_STATUS.md)
-[![Support](https://img.shields.io/badge/support-zgremre@gmail.com-cyan)](mailto:zgremre@gmail.com)
 
 **The professional, multi-provider AI development CLI for your terminal**
 
-Cude Code is a production-ready, feature-rich CLI tool for AI-assisted development. It supports 19 AI providers and brings professional capabilities to your terminal.
+Cude Code is a production-ready, feature-rich CLI tool for AI-assisted development. It supports 19 AI providers, 22 agent tools, browser automation, native RAG, and brings professional capabilities to your terminal.
 
 ```bash
 npm install -g cude-code
 cude chat
 ```
 
-## ⭐ Why Cude Code?
+## Why Cude Code?
 
-- **🆓 Free & Open Source**: MIT licensed, no hidden costs
-- **🤖 19 AI Providers**: OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, and more
-- **🔌 Plug & Play**: Works out of the box with just an API key
-- **⚡ Autonomous Agent**: Solve complex tasks with tool-use
-- **💰 Cost Tracking**: Monitor spending, set budgets, get alerts
-- **📁 Session Management**: Save and restore conversations
-- **🔐 Privacy First**: Everything stays on your machine
-- **🛠️ Powerful Tools**: File operations, git integration, shell commands
-- **📱 Pure CLI**: No Electron, lightweight and fast
+- **Free & Open Source**: MIT licensed, no hidden costs
+- **19 AI Providers**: OpenAI, Anthropic, Gemini, DeepSeek, Groq, Ollama, and more
+- **22 Agent Tools**: File ops, git, npm, diff, patch, search, browser, RAG
+- **Browser Automation**: Navigate, screenshot, and extract web content via Playwright
+- **Native RAG**: Index local codebases and search with keyword matching
+- **Autonomous Agent**: Solve complex tasks with tool-use
+- **Cost Tracking**: Monitor spending, set budgets, get alerts
+- **Session Management**: Save and restore conversations
+- **Privacy First**: Everything stays on your machine
+- **Pure CLI**: No Electron, lightweight and fast
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install
 ```bash
@@ -56,7 +66,7 @@ cude chat -p openai -m gpt-4
 cude run "Create a REST API in TypeScript"
 ```
 
-## 📚 Usage Examples
+## Usage Examples
 
 ### Interactive Chat
 ```bash
@@ -142,20 +152,20 @@ cude sessions export <id> conversation.md
 cude sessions delete <id>
 ```
 
-## 🔌 Supported Providers
+## Supported Providers
 
-### Free & Fast ⚡
+### Free & Fast
 - **Groq**: Free tier, fastest responses
 - **Gemini Flash**: Free tier, best quality for free
 - **Ollama**: Local only, completely free
 
-### Production Quality 🏆
+### Production Quality
 - **OpenAI**: GPT-4 family, most capable
 - **Anthropic**: Claude 3 family, best reasoning
 - **Google Gemini**: Latest models, large context
 - **DeepSeek**: Affordable, excellent for code
 
-### Self-Hosted 🖥️
+### Self-Hosted
 - **Ollama**: Local models, no setup needed
 - **vLLM**: High-performance serving
 - **llama.cpp**: Minimal requirements
@@ -163,21 +173,34 @@ cude sessions delete <id>
 ### Complete List
 OpenAI, Anthropic, Google Gemini, Groq, DeepSeek, Mistral, xAI, Cohere, Together AI, Perplexity, NVIDIA, OpenRouter, Azure OpenAI, LiteLLM, HuggingFace, vLLM, Replicate, Local GGUF, Ollama
 
-[→ Full Provider Guide](./PROVIDERS.md)
+## Available Tools
 
-## 🛠️ Available Tools
+Cude Code's agent can use **22 built-in tools**:
 
-Cude Code's agent can use 16 built-in tools:
+### File Operations
+`read_file`, `write_file`, `replace_in_file` (multi-occurrence via `replace_all`), `delete_file`, `copy_file`, `move_file` (rename), `get_file_info`
 
-- **File Operations**: `read_file`, `write_file`, `replace_in_file` (multi-occurrence via `replace_all`), `delete_file`, `copy_file`, `move_file` (rename), `get_file_info`
-- **Directory Management**: `create_directory`, `list_directory`
-- **Search**: `search_files` (pattern), `grep_search` (content)
-- **Shell & Build**: `run_command`, `npm_command`, `git_command`
-- **Patch & Diff**: `apply_patch` (multi-hunk unified diff), `diff_files` (file comparison)
+### Directory Management
+`create_directory`, `list_directory`
+
+### Search
+`search_files` (pattern), `grep_search` (content)
+
+### Shell & Build
+`run_command`, `npm_command`, `git_command`
+
+### Patch & Diff
+`apply_patch` (multi-hunk unified diff), `diff_files` (file comparison)
+
+### Browser Automation
+`browser_navigate` (fetch page content), `browser_screenshot` (capture pages), `browser_extract` (CSS selector extraction)
+
+### Native RAG
+`rag_index` (index local files), `rag_search` (keyword search across indexed files), `rag_summary` (index overview)
 
 Destructive commands (e.g. `rm -rf`, `mkfs.`, `shutdown`) trigger an interactive confirmation before execution.
 
-## 💰 Cost Tracking
+## Cost Tracking
 
 Built-in budget management:
 
@@ -200,43 +223,11 @@ Supported cost tracking for:
 - Per-token pricing for accuracy
 - Historical tracking and reports
 
-## 📖 Documentation
+## Documentation
 
 - **[Changelog](./CHANGELOG.md)** - Release notes
 
-## 🎯 Common Use Cases
-
-### 1️⃣ Code Generation
-```bash
-cude run "Generate a GraphQL API with authentication in Node.js"
-```
-
-### 2️⃣ Code Review
-```bash
-cude run "Review the code in src/components/ and suggest improvements"
-```
-
-### 3️⃣ Bug Fixing
-```bash
-cude run "Debug and fix the TypeScript error in main.ts"
-```
-
-### 4️⃣ Refactoring
-```bash
-cude run "Refactor services/ to use dependency injection"
-```
-
-### 5️⃣ Documentation
-```bash
-cude run "Generate comprehensive docs for the API"
-```
-
-### 6️⃣ Testing
-```bash
-cude run "Write unit tests for the authentication module"
-```
-
-## ⚙️ Configuration
+## Configuration
 
 ### Environment Variables
 ```bash
@@ -252,18 +243,18 @@ export CUDE_DEFAULT_MODEL="gpt-4"
 - **Linux/macOS**: `~/.cude/config.json`
 - **Windows**: `%USERPROFILE%\.cude\config.json`
 
-Sessions are stored under `~/.cude/sessions/` and spending records under `~/.cude/budget.json`. Upgrading from a previous build? On first launch, Cude Code automatically migrates any existing `~/.codiente` directory to `~/.cude`.
+Sessions are stored under `~/.cude/sessions/` and spending records under `~/.cude/budget.json`.
 
-## 🔒 Security
+## Security
 
-- ✅ All data stored locally
-- ✅ No cloud sync (unless enabled)
-- ✅ API keys never logged
-- ✅ Destructive commands require confirmation
-- ✅ Safe command execution
-- ✅ Open source for transparency
+- All data stored locally
+- No cloud sync (unless enabled)
+- API keys never logged
+- Destructive commands require confirmation
+- Safe command execution
+- Open source for transparency
 
-## 📊 Benchmarks
+## Benchmarks
 
 | Metric | Value |
 |--------|-------|
@@ -273,7 +264,7 @@ Sessions are stored under `~/.cude/sessions/` and spending records under `~/.cud
 | Memory Base | < 50MB |
 | Max Contexts | Unlimited |
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Areas we need help with:
 
@@ -283,56 +274,45 @@ We welcome contributions! Areas we need help with:
 - [ ] Documentation improvements
 - [ ] Bug fixes and optimizations
 
-[Contributing Guide](./CONTRIBUTING.md)
+## License
 
-## 📄 License
-
-MIT © 2025 Cude Code Contributors
+MIT &copy; 2025 Cude Code Contributors
 
 Free for personal and commercial use.
 
-## 🆘 Support
+## Support
 
 - **Issues**: [GitHub Issues](https://github.com/Emrevrg/Cude-Code/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Emrevrg/Cude-Code/discussions)
 - **Email**: zgremre@gmail.com
 - **In-app help**: run `cude --help` or `cude <command> --help`
 
-## 🎓 Learning Resources
+## Roadmap
 
-- [Changelog](./CHANGELOG.md)
-- [Provider Configuration](README.md#-supported-providers)
-- [Available Tools](README.md#-available-tools)
-- [Common Use Cases](README.md#-common-use-cases)
+### Current (v0.1)
+- 19 AI providers
+- Chat & autonomous agent modes
+- 22 agent tools (file ops, git, npm, diff, patch, search, browser, RAG)
+- Browser automation via Playwright
+- Native RAG with local file indexing
+- Session management
+- Cost tracking with budgets & alerts
+- Environment-variable key fallback
+- Automatic legacy data migration
 
-## 🚀 Roadmap
+### Planned (v0.2)
+- MCP (Model Context Protocol) server support
+- VS Code extension
+- Advanced analytics & spend reports
 
-### Current (v1.1)
-- ✅ 19 AI providers
-- ✅ Chat & autonomous agent modes
-- ✅ 16 agent tools (file ops, git, npm, diff, patch, search)
-- ✅ Session management
-- ✅ Cost tracking with budgets & alerts
-- ✅ Environment-variable key fallback
-- ✅ Automatic legacy data migration
-
-### Planned (v1.2)
-- 🔄 MCP (Model Context Protocol) server support
-- 🔄 Browser automation tool
-- 🔄 Native RAG / local docs index
-
-### Future (v2.0)
-- 🔄 VS Code extension
-- 🔄 Web UI dashboard
-- 🔄 Advanced analytics & spend reports
-
-## 📜 Changelog
-
-See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
+### Future (v1.0)
+- Web UI dashboard
+- Plugin system
+- Team collaboration features
 
 ---
 
-**Made with ❤️ by developers, for developers**
+**Made with care by developers, for developers**
 
 *Cude Code - Where AI meets your terminal*
 

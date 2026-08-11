@@ -1,18 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Cude Code logo">
-  <defs>
-    <linearGradient id="cg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#22d3ee"/>
-      <stop offset="50%" stop-color="#a855f7"/>
-      <stop offset="100%" stop-color="#3b82f6"/>
-    </linearGradient>
-    <linearGradient id="cg2" x1="0" y1="1" x2="1" y2="0">
-      <stop offset="0%" stop-color="#0ea5e9"/>
-      <stop offset="100%" stop-color="#6366f1"/>
-    </linearGradient>
-  </defs>
-  <rect width="256" height="256" rx="56" fill="#0f172a"/>
-  <circle cx="128" cy="128" r="104" fill="none" stroke="url(#cg)" stroke-width="14" opacity="0.85"/>
-  <path d="M150 78 a60 60 0 1 0 0 100" fill="none" stroke="url(#cg)" stroke-width="20" stroke-linecap="round"/>
-  <path d="M92 116 l-22 12 l22 12" fill="none" stroke="url(#cg2)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M164 116 l22 12 l-22 12" fill="none" stroke="url(#cg2)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Cude Code logo">
+  <rect width="512" height="512" fill="#000000"/>
+
+  <!-- Hexagon outer shape with bottom notch -->
+  <path d="
+    M256 52
+    L440 158
+    L440 340
+    L290 426
+    L270 410
+    L256 426
+    L242 410
+    L222 426
+    L72 340
+    L72 158
+    Z
+  " fill="none" stroke="#ffffff" stroke-width="28" stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- C shape - left arc opening to the right -->
+  <path d="M310 170 A90 90 0 1 0 310 342"
+        fill="none" stroke="#ffffff" stroke-width="32" stroke-linecap="round"/>
+
+  <!-- > chevron inside -->
+  <path d="M228 210 L288 256 L228 302"
+        fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

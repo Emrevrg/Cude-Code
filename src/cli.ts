@@ -9,7 +9,7 @@ export function createCLI(): Command {
   program
     .name('cude')
     .description(chalk.cyan('Cude Code — autonomous AI development CLI for your terminal'))
-    .version('1.1.0')
+    .version('0.1.0')
     .option('--no-banner', 'Skip the banner display')
     .hook('preAction', (thisCommand) => {
       const opts = program.opts() as { banner: boolean };

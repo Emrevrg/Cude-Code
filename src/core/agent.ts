@@ -34,8 +34,8 @@ export interface AgentStep {
   toolArgs?: Record<string, unknown>;
 }
 
-const AGENT_SYSTEM_PROMPT = `You are an autonomous AI agent with access to tools for completing tasks.
-You can read files, write files, execute commands, list directories, and create directories.
+const AGENT_SYSTEM_PROMPT = `You are an autonomous AI agent with access to 22 tools for completing tasks.
+You can read/write/modify files, execute commands, manage directories, automate browsers, and search local codebases with RAG.
 
 When given a task:
 1. Analyze what needs to be done
@@ -47,6 +47,8 @@ Important guidelines:
 - Always verify files exist before trying to read them
 - Create directories before writing files in them
 - For shell commands, prefer simple, safe commands
+- Use browser tools to navigate, screenshot, or extract web content
+- Use RAG tools to index and search local codebases for relevant code
 - Provide clear explanations of what you're doing
 - When the task is complete, provide a summary of what was accomplished
 
