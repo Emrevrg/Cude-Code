@@ -16,6 +16,12 @@
   "bin": {
     "cude": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "!dist/**/*.map",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "module",
   "main": "dist/index.js",
   "exports": {
