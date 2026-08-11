@@ -2,6 +2,11 @@
 // description, topics, the files GitHub surfaces, and whether the README
 // rendered. Images are blocked by this sandbox's proxy, so it reports which
 // README images failed to load separately from the page content itself.
+//
+// Description and topics come from the API, not the DOM. Scraping them was
+// worse than useless: GitHub's sidebar markup changed, the old selectors
+// matched nothing, and this reported "(not set)" for a description that was
+// in fact set — a silent wrong answer rather than a visible failure.
 
 import { launchChromium } from './chromium.mjs';
 
@@ -22,8 +27,6 @@ const info = await page.evaluate(`
     const t = (sel) => document.querySelector(sel)?.textContent?.trim() ?? null;
     const readme = document.querySelector('article.markdown-body');
     return {
-      description: t('[data-testid="repository-description"], .f4.my-3'),
-      topics: Array.from(document.querySelectorAll('a.topic-tag')).map(a => a.textContent.trim()),
       files: Array.from(document.querySelectorAll('a[href*="/blob/"], a[href*="/tree/"]'))
         .map(a => a.textContent.trim()).filter(Boolean),
       readmeHeadings: readme
@@ -41,8 +44,23 @@ const info = await page.evaluate(`
   })()
 `);
 
-console.log('Description :', info.description ?? '(not set)');
-console.log('Topics      :', info.topics.length ? info.topics.join(', ') : '(none set)');
+// The API is authoritative for repository metadata; the rendered page is not.
+const slug = new URL(url).pathname.replace(/^\/|\/$/g, '');
+const api = await fetch(`https://api.github.com/repos/${slug}`, {
+  headers: {
+    accept: 'application/vnd.github+json',
+    ...(process.env.GITHUB_TOKEN ? { authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
+  },
+}).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
+if (api) {
+  const desc = api.description?.trim();
+  console.log('Description :', desc ? JSON.stringify(desc) : '(not set)');
+  console.log('Topics      :', api.topics?.length ? api.topics.join(', ') : '(none set)');
+} else {
+  console.log('Description : (API unreachable — not scraping, it reports wrong answers)');
+  console.log('Topics      : (API unreachable)');
+}
 console.log('\nFiles GitHub lists:');
 console.log(' ', [...new Set(info.files)].filter(f => !f.includes('\n')).join('  '));
 console.log('\nREADME headings rendered:', info.readmeHeadings.length);
