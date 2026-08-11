@@ -1,4 +1,4 @@
-// Generates the CLI block-art brand mark from the same geometry as assets/logo.svg.
+// Generates the CLI block-art brand mark from the same geometry as assets/cude-mark.svg.
 // Draws into a half-block pixel grid (each text row = 2 pixel rows) so diagonals
 // come out smooth and the hexagon keeps its true aspect ratio.
 
