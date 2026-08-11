@@ -11,6 +11,12 @@ import type {
   ToolCall,
 } from './types.js';
 
+import { fetchProvider } from './net.js';
+
+// Reports an unreachable endpoint instead of a bare "fetch failed".
+const fetchVllm = (url: string, init?: RequestInit): Promise<Response> =>
+  fetchProvider(url, init, 'vLLM', 'Start your vLLM server, or set a different base URL in config.');
+
 export class VLLMProvider implements Provider {
   name = 'vllm';
   displayName = 'vLLM (Self-hosted)';
@@ -28,7 +34,7 @@ export class VLLMProvider implements Provider {
   async isAvailable(): Promise<boolean> {
     try {
       const { endpoint } = this.getConfig();
-      const response = await fetch(`${endpoint}/v1/models`);
+      const response = await fetchVllm(`${endpoint}/v1/models`);
       return response.ok;
     } catch {
       return false;
@@ -62,7 +68,7 @@ export class VLLMProvider implements Provider {
       temperature: options.temperature,
     };
 
-    const response = await fetch(`${endpoint}/v1/chat/completions`, {
+    const response = await fetchVllm(`${endpoint}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -100,7 +106,7 @@ export class VLLMProvider implements Provider {
       stream: true,
     };
 
-    const response = await fetch(`${endpoint}/v1/chat/completions`, {
+    const response = await fetchVllm(`${endpoint}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -190,7 +196,7 @@ export class VLLMProvider implements Provider {
       })),
     };
 
-    const response = await fetch(`${endpoint}/v1/chat/completions`, {
+    const response = await fetchVllm(`${endpoint}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

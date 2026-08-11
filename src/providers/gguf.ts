@@ -9,6 +9,12 @@ import type {
   ModelInfo,
 } from './types.js';
 
+import { fetchProvider } from './net.js';
+
+// Reports an unreachable endpoint instead of a bare "fetch failed".
+const fetchGguf = (url: string, init?: RequestInit): Promise<Response> =>
+  fetchProvider(url, init, 'the llama.cpp server', 'Start it with: llama-server -m <model.gguf>');
+
 export class LocalGGUFProvider implements Provider {
   name = 'gguf';
   displayName = 'Local GGUF (llama.cpp)';
@@ -26,7 +32,7 @@ export class LocalGGUFProvider implements Provider {
   async isAvailable(): Promise<boolean> {
     try {
       const { endpoint } = this.getConfig();
-      const response = await fetch(`${endpoint}/health`);
+      const response = await fetchGguf(`${endpoint}/health`);
       return response.ok;
     } catch {
       return false;
@@ -56,7 +62,7 @@ export class LocalGGUFProvider implements Provider {
       temperature: options.temperature ?? 0.7,
     };
 
-    const response = await fetch(`${endpoint}/completion`, {
+    const response = await fetchGguf(`${endpoint}/completion`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -90,7 +96,7 @@ export class LocalGGUFProvider implements Provider {
       stream: true,
     };
 
-    const response = await fetch(`${endpoint}/completion`, {
+    const response = await fetchGguf(`${endpoint}/completion`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

@@ -11,6 +11,12 @@ import type {
   ToolCall,
 } from './types.js';
 
+import { fetchProvider } from './net.js';
+
+// Reports an unreachable endpoint instead of a bare "fetch failed".
+const fetchLiteLLM = (url: string, init?: RequestInit): Promise<Response> =>
+  fetchProvider(url, init, 'the LiteLLM proxy', 'Start it with: litellm --model <model>');
+
 export class LiteLLMProvider implements Provider {
   name = 'litellm';
   displayName = 'LiteLLM Proxy';
@@ -29,7 +35,7 @@ export class LiteLLMProvider implements Provider {
   async isAvailable(): Promise<boolean> {
     try {
       const { endpoint } = this.getConfig();
-      const response = await fetch(`${endpoint}/models`, {
+      const response = await fetchLiteLLM(`${endpoint}/models`, {
         method: 'GET',
       });
       return response.ok;
@@ -68,7 +74,7 @@ export class LiteLLMProvider implements Provider {
       temperature: options.temperature,
     };
 
-    const response = await fetch(`${endpoint}/chat/completions`, {
+    const response = await fetchLiteLLM(`${endpoint}/chat/completions`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
@@ -109,7 +115,7 @@ export class LiteLLMProvider implements Provider {
       stream: true,
     };
 
-    const response = await fetch(`${endpoint}/chat/completions`, {
+    const response = await fetchLiteLLM(`${endpoint}/chat/completions`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
@@ -203,7 +209,7 @@ export class LiteLLMProvider implements Provider {
       })),
     };
 
-    const response = await fetch(`${endpoint}/chat/completions`, {
+    const response = await fetchLiteLLM(`${endpoint}/chat/completions`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
