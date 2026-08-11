@@ -1,119 +1,136 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400" role="img" aria-label="Cude Code banner">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 620" width="1600" height="620" role="img" aria-label="Cude Code — YAZ. ANLA. ÜRET.">
+  <title>Cude Code — YAZ. ANLA. ÜRET.</title>
+
   <defs>
-    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0a0a0f"/>
-      <stop offset="50%" stop-color="#0d0d1a"/>
-      <stop offset="100%" stop-color="#0a0a0f"/>
+    <!-- The one canonical brand mark, reused everywhere in this banner -->
+    <g id="mark" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 429 156 L 256 56 L 83 156 L 83 356 L 230 441 L 230 470" stroke-width="42"/>
+      <path d="M 282 470 L 282 441 L 429 356" stroke-width="42"/>
+      <path d="M 205 190 L 300 256 L 205 322" stroke-width="38"/>
+    </g>
+
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#08080c"/>
+      <stop offset="55%" stop-color="#0b0b12"/>
+      <stop offset="100%" stop-color="#05050a"/>
     </linearGradient>
-    <linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#6366f1"/>
-      <stop offset="100%" stop-color="#818cf8"/>
+
+    <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#8b8bff" stop-opacity="0.30"/>
+      <stop offset="55%" stop-color="#6366f1" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#a5b4fc"/>
     </linearGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="4" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+
+    <linearGradient id="arc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="45%" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="18" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
-    <filter id="softGlow">
-      <feGaussianBlur stdDeviation="8" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+
+    <filter id="tightGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
 
   <!-- Background -->
-  <rect width="1200" height="400" fill="url(#bgGrad)"/>
+  <rect width="1600" height="620" fill="url(#bg)"/>
+  <ellipse cx="1185" cy="290" rx="430" ry="330" fill="url(#halo)"/>
+  <path d="M 1010 30 A 640 640 0 0 1 1580 470" fill="none" stroke="url(#arc)" stroke-width="2.5"/>
 
-  <!-- Subtle grid lines -->
-  <line x1="0" y1="380" x2="1200" y2="380" stroke="#1a1a2e" stroke-width="1"/>
-  <line x1="0" y1="20" x2="1200" y2="20" stroke="#1a1a2e" stroke-width="1"/>
+  <!-- ============ LEFT: identity ============ -->
 
-  <!-- Left logo (small) -->
-  <g transform="translate(100, 100) scale(0.35)">
-    <!-- Hexagon -->
-    <path d="M128 10 L240 75 L240 200 L165 240 L155 230 L128 248 L101 230 L91 240 L16 200 L16 75 Z"
-          fill="none" stroke="#ffffff" stroke-width="16" stroke-linejoin="round" stroke-linecap="round" filter="url(#glow)"/>
-    <!-- C arc -->
-    <path d="M175 80 A55 55 0 1 0 175 180" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round"/>
-    <!-- > chevron -->
-    <path d="M118 108 L148 130 L118 152" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Small mark -->
+  <g transform="translate(88, 148) scale(0.30)">
+    <use href="#mark" stroke="#ffffff"/>
   </g>
 
-  <!-- CUDE CODE title -->
-  <text x="235" y="142" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="72" font-weight="800" fill="#ffffff" letter-spacing="8" filter="url(#glow)">CUDE CODE</text>
+  <text x="272" y="252" font-family="Inter, 'Segoe UI', system-ui, sans-serif"
+        font-size="94" font-weight="800" fill="#ffffff" letter-spacing="4"
+        filter="url(#tightGlow)">CUDE CODE</text>
 
-  <!-- Tagline: YAZ. ANLA. URET. -->
-  <text x="237" y="185" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="22" font-weight="600" letter-spacing="6">
-    <tspan fill="#999999">YAZ.</tspan>
-    <tspan fill="#999999" dx="6">ANLA.</tspan>
-    <tspan fill="url(#accentGrad)" dx="6">URET.</tspan>
+  <text x="276" y="312" font-family="Inter, 'Segoe UI', system-ui, sans-serif"
+        font-size="33" font-weight="500" letter-spacing="9">
+    <tspan fill="#d4d4dd">YAZ. ANLA. </tspan><tspan fill="url(#accent)">ÜRET.</tspan>
   </text>
 
-  <!-- Description -->
-  <text x="237" y="225" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="15" fill="#666666" letter-spacing="1">AI destekli yeni nesil CLI kodlama asistani.</text>
-  <text x="237" y="248" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="15" fill="#666666" letter-spacing="1">Terminalinden cikmadan uretkenligini katla.</text>
+  <text x="276" y="378" font-family="Inter, 'Segoe UI', system-ui, sans-serif"
+        font-size="21" fill="#9a9aa8">AI destekli yeni nesil CLI kodlama asistanı.</text>
+  <text x="276" y="412" font-family="Inter, 'Segoe UI', system-ui, sans-serif"
+        font-size="21" fill="#9a9aa8">Terminalinden çıkmadan üretkenliğini katla.</text>
 
-  <!-- Feature badges row -->
-  <!-- Terminal -->
-  <g transform="translate(140, 290)">
-    <text x="0" y="0" font-family="monospace" font-size="16" fill="#6366f1">&gt;_</text>
-    <text x="0" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#cccccc">Terminal</text>
-    <text x="0" y="35" font-family="system-ui, sans-serif" font-size="10" fill="#555555">Komut satirindan</text>
-    <text x="0" y="48" font-family="system-ui, sans-serif" font-size="10" fill="#555555">tam kontrol.</text>
+  <!-- ============ Feature columns ============ -->
+  <g font-family="Inter, 'Segoe UI', system-ui, sans-serif">
+    <line x1="272" y1="444" x2="272" y2="524" stroke="#22222e" stroke-width="1.5"/>
+    <line x1="472" y1="444" x2="472" y2="524" stroke="#22222e" stroke-width="1.5"/>
+    <line x1="672" y1="444" x2="672" y2="524" stroke="#22222e" stroke-width="1.5"/>
+    <line x1="872" y1="444" x2="872" y2="524" stroke="#22222e" stroke-width="1.5"/>
+
+    <g transform="translate(92, 444)">
+      <text y="16" font-family="'JetBrains Mono', monospace" font-size="19" font-weight="700" fill="#ffffff">&gt;_</text>
+      <text y="46" font-size="16" font-weight="700" fill="#ffffff">Terminal Odaklı</text>
+      <text y="70" font-size="13" fill="#7a7a88">Komut satırından</text>
+      <text y="88" font-size="13" fill="#7a7a88">tam kontrol.</text>
+    </g>
+
+    <g transform="translate(300, 444)">
+      <path d="M 10 2 L 2 15 L 8 15 L 6 26 L 15 12 L 9 12 Z" fill="#818cf8"/>
+      <text y="46" font-size="16" font-weight="700" fill="#ffffff">AI Destekli</text>
+      <text y="70" font-size="13" fill="#7a7a88">Kod yaz, açıkla,</text>
+      <text y="88" font-size="13" fill="#7a7a88">hataları bul ve düzelt.</text>
+    </g>
+
+    <g transform="translate(500, 444)">
+      <path d="M 12 2 L 22 8 L 22 20 L 12 26 L 2 20 L 2 8 Z" fill="none" stroke="#818cf8" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M 2 8 L 12 14 L 22 8 M 12 14 L 12 26" fill="none" stroke="#818cf8" stroke-width="2.4" stroke-linejoin="round"/>
+      <text y="46" font-size="16" font-weight="700" fill="#ffffff">Akıllı Üretkenlik</text>
+      <text y="70" font-size="13" fill="#7a7a88">Daha hızlı kodla,</text>
+      <text y="88" font-size="13" fill="#7a7a88">daha fazlasını üret.</text>
+    </g>
+
+    <g transform="translate(700, 444)">
+      <rect x="3" y="11" width="18" height="14" rx="3" fill="none" stroke="#818cf8" stroke-width="2.4"/>
+      <path d="M 7 11 V 7 a 5 5 0 0 1 10 0 v 4" fill="none" stroke="#818cf8" stroke-width="2.4" stroke-linecap="round"/>
+      <text y="46" font-size="16" font-weight="700" fill="#ffffff">Güvenli &amp; Gizli</text>
+      <text y="70" font-size="13" fill="#7a7a88">Kodların sadece</text>
+      <text y="88" font-size="13" fill="#7a7a88">sende kalır.</text>
+    </g>
   </g>
 
-  <!-- AI -->
-  <g transform="translate(300, 290)">
-    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="14" fill="#6366f1">&#x26A1;</text>
-    <text x="0" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#cccccc">AI Destekli</text>
-    <text x="0" y="35" font-family="system-ui, sans-serif" font-size="10" fill="#555555">19 provider,</text>
-    <text x="0" y="48" font-family="system-ui, sans-serif" font-size="10" fill="#555555">22 tool.</text>
+  <!-- ============ Terminal input bar ============ -->
+  <g transform="translate(88, 550)">
+    <rect x="0" y="0" width="800" height="46" rx="10" fill="#0e0e16" stroke="#23232f" stroke-width="1.5"/>
+    <text x="22" y="30" font-family="'JetBrains Mono', monospace" font-size="17" fill="#6366f1" font-weight="700">&gt;_</text>
+    <text x="56" y="30" font-family="'JetBrains Mono', monospace" font-size="17">
+      <tspan fill="#e6e6f0">cude</tspan><tspan fill="#9a9aa8"> code</tspan><tspan fill="#5a5a6a"> --help</tspan>
+    </text>
   </g>
 
-  <!-- Productivity -->
-  <g transform="translate(460, 290)">
-    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="14" fill="#6366f1">&#x2B22;</text>
-    <text x="0" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#cccccc">Browser + RAG</text>
-    <text x="0" y="35" font-family="system-ui, sans-serif" font-size="10" fill="#555555">Web otomasyon,</text>
-    <text x="0" y="48" font-family="system-ui, sans-serif" font-size="10" fill="#555555">yerel arama.</text>
+  <!-- ============ RIGHT: hero mark ============ -->
+  <g transform="translate(925, 62) scale(0.86)" filter="url(#softGlow)">
+    <use href="#mark" stroke="#ffffff"/>
   </g>
 
-  <!-- Security -->
-  <g transform="translate(640, 290)">
-    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="14" fill="#6366f1">&#x1F512;</text>
-    <text x="0" y="20" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#cccccc">Guvenli</text>
-    <text x="0" y="35" font-family="system-ui, sans-serif" font-size="10" fill="#555555">Kodlarin sadece</text>
-    <text x="0" y="48" font-family="system-ui, sans-serif" font-size="10" fill="#555555">sende kalir.</text>
-  </g>
-
-  <!-- Right side: large glowing logo -->
-  <g transform="translate(900, 120) scale(0.7)" opacity="0.15" filter="url(#softGlow)">
-    <path d="M128 10 L240 75 L240 200 L165 240 L155 230 L128 248 L101 230 L91 240 L16 200 L16 75 Z"
-          fill="none" stroke="#6366f1" stroke-width="14" stroke-linejoin="round" stroke-linecap="round"/>
-    <path d="M175 80 A55 55 0 1 0 175 180" fill="none" stroke="#6366f1" stroke-width="16" stroke-linecap="round"/>
-    <path d="M118 108 L148 130 L118 152" fill="none" stroke="#6366f1" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
-
-  <!-- Bottom right text -->
-  <text x="1060" y="355" text-anchor="end" font-family="system-ui, sans-serif" font-size="13" fill="#444444" letter-spacing="2">Kodlama artik</text>
-  <text x="1060" y="375" text-anchor="end" font-family="system-ui, sans-serif" font-size="13" letter-spacing="2">
-    <tspan fill="url(#accentGrad)">komutun</tspan>
-    <tspan fill="#444444"> kadar yakin.</tspan>
+  <!-- ============ RIGHT: closing line ============ -->
+  <text x="1548" y="512" text-anchor="end"
+        font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="30" fill="#e6e6f0">Kodlama artık</text>
+  <text x="1548" y="552" text-anchor="end"
+        font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="30">
+    <tspan fill="url(#accent)" font-weight="700">komutun</tspan><tspan fill="#e6e6f0"> kadar yakın.</tspan>
   </text>
 
-  <!-- Terminal prompt bottom left -->
-  <g transform="translate(140, 370)">
-    <text font-family="monospace" font-size="12" fill="#333333">&gt;_ cude code --help</text>
-  </g>
-
-  <!-- Bottom right badge -->
-  <g transform="translate(1080, 350)">
-    <text x="0" y="0" font-family="monospace" font-size="11" fill="#333333">&gt;_</text>
-    <text x="20" y="0" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#444444">CUDE CODE</text>
-    <text x="20" y="15" font-family="system-ui, sans-serif" font-size="9" fill="#333333" letter-spacing="1">AI-POWERED CLI</text>
+  <g transform="translate(1548, 588)" text-anchor="end">
+    <text font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="13"
+          font-weight="700" fill="#8b8b9a" letter-spacing="2">CUDE CODE  ·  AI-POWERED CLI ASSISTANT</text>
   </g>
 </svg>
