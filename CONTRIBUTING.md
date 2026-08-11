@@ -25,10 +25,19 @@ Everything else works without it.
 ## Before opening a pull request
 
 ```bash
-npm run type-check   # tsc --noEmit
+npm test             # builds, then runs the suite
 npm run lint         # eslint, must report 0 errors
-npm run build        # tsc
 ```
+
+`npm test` builds first; `npm run test:only` skips the build when you have
+already built. The suite covers every registered tool against real files, a
+real git repository and — when Chromium is installed — a real browser, plus
+integrity checks on the model catalog. The browser tests skip themselves
+when Chromium is absent, so the suite is green without it.
+
+Several tests are marked `regression:` and correspond to bugs that actually
+shipped. If one starts failing, that bug is back — fix the code rather than
+the test.
 
 `.github/workflows/ci.yml` runs these on Node 18, 20 and 22 for every push
 and pull request.

@@ -100,7 +100,11 @@ export const MODELS: Record<string, ModelDefinition> = {
     name: 'Gemini 1.5 Flash',
     provider: 'gemini',
     pricing: { inputPerMillion: 0.075, outputPerMillion: 0.30 },
-    free: true,
+    // Google offers a rate-limited free tier for this model, but usage above
+    // it bills. `free` gates the budget-exhausted fallback in the selector, so
+    // it has to mean "costs nothing" — otherwise a user whose budget hit zero
+    // gets routed to a model that charges them.
+    free: false,
     local: false,
     capabilities: ['quick', 'general', 'code', 'vision'],
     contextWindow: 1000000,
