@@ -11,7 +11,7 @@
 // Usage: node tools/generate-logo.mjs [--write]
 //   --write  patches LOGO_ART in src/ui/display.ts in place
 
-import { chromium } from 'playwright';
+import { launchChromium } from './chromium.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -34,10 +34,7 @@ const svg = readFileSync(svgPath, 'utf8')
   .replace(/\swidth="[^"]*"/, '')
   .replace(/\sheight="[^"]*"/, '');
 
-const browser = await chromium.launch({
-  executablePath: process.env.CUDE_CHROME_PATH || undefined,
-  args: ['--no-sandbox'],
-});
+const browser = await launchChromium();
 const page = await browser.newPage({ viewport: { width: 400, height: 400 } });
 
 await page.setContent(
