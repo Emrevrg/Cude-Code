@@ -4,6 +4,9 @@
 // Some sandboxes (including the one these scripts were written in) ship a
 // browser at a fixed location instead and set PLAYWRIGHT_BROWSERS_PATH, so this
 // falls back to whatever it can find rather than hardcoding one machine's path.
+//
+// Resolution order: CUDE_CHROME_PATH, then a browser found under
+// PLAYWRIGHT_BROWSERS_PATH, then Playwright's own.
 
 import { statSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -45,7 +48,8 @@ function preinstalledChromium() {
 }
 
 export async function launchChromium(options = {}) {
-  const executablePath = preinstalledChromium();
+  // An explicit CUDE_CHROME_PATH wins: if someone names a browser, use theirs.
+  const executablePath = process.env.CUDE_CHROME_PATH || preinstalledChromium();
   const args = ['--no-sandbox', ...(options.args ?? [])];
   try {
     return await chromium.launch({ ...options, args, ...(executablePath ? { executablePath } : {}) });
@@ -56,6 +60,10 @@ export async function launchChromium(options = {}) {
           'Install it with: npx playwright install chromium'
       );
     }
+    // Falling back to a different browser than the one that was named is
+    // surprising enough to say out loud — otherwise a typo in
+    // CUDE_CHROME_PATH looks like it worked.
+    console.warn(`Could not launch Chromium at ${executablePath} (${err.message.split('\n')[0]}); trying Playwright's own.`);
     // The pre-installed build may not match the installed Playwright version;
     // let Playwright try its own before giving up.
     return chromium.launch({ ...options, args });

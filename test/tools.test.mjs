@@ -146,7 +146,7 @@ describe('RAG', () => {
     await ok('rag_index', { directory: 'src/ui' });
     const found = await ok('rag_search', { query: 'banner' });
     assert.ok(found.output.length > 0);
-    assert.match((await ok('rag_summary', {})).output, /src\/ui/);
+    assert.match((await ok('rag_summary', {})).output, /src[\\/]+ui/);
   });
 });
 
