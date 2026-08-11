@@ -119,7 +119,7 @@ cude config list-keys
 
 # Set defaults
 cude config set default-provider openai
-cude config set default-model gpt-4
+cude config set default-model gpt-4o
 ```
 
 ### Provider Management
@@ -242,11 +242,26 @@ Supported cost tracking for:
 ```bash
 export CUDE_OPENAI_KEY="sk-..."
 export CUDE_ANTHROPIC_KEY="sk-ant-..."
-export CUDE_DEFAULT_PROVIDER="openai"
-export CUDE_DEFAULT_MODEL="gpt-4"
 ```
 
-> Note: API keys are normally stored in `~/.cude/config.json` via `cude config set-key`. The environment variables above are read at startup as a fallback when no stored key exists, which is handy for CI runs and ephemeral shells.
+Keys are looked up in this order, per provider:
+
+1. `CUDE_<PROVIDER>_KEY`
+2. `CUDE_<PROVIDER>_API_KEY`
+3. the provider's conventional name — `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`,
+   `GEMINI_API_KEY`, `GROQ_API_KEY`, `REPLICATE_API_TOKEN` and so on, so keys
+   already in your shell are picked up without renaming them
+4. `~/.cude/config.json`, written by `cude config set-key`
+
+Environment variables are read at startup and take precedence over the stored
+config, which is handy for CI runs and ephemeral shells.
+
+Defaults are not environment variables — set them with:
+
+```bash
+cude config set default-provider openai
+cude config set default-model gpt-4o
+```
 
 ### Config Files
 - **Linux/macOS**: `~/.cude/config.json`
@@ -265,13 +280,16 @@ Sessions are stored under `~/.cude/sessions/` and spending records under `~/.cud
 
 ## Benchmarks
 
-| Metric | Value |
-|--------|-------|
-| Startup Time | < 100ms |
-| Token Estimation | Instant |
-| Max File Size | 100MB |
-| Memory Base | < 50MB |
-| Max Contexts | Unlimited |
+Measured on Node 22, Linux x64, from a release build. Reproduce with the
+commands in the right-hand column.
+
+| Metric | Value | How it was measured |
+|--------|-------|---------------------|
+| Cold start | ~0.31 s | `time node dist/index.js --version` |
+| Peak memory, cold start | ~84 MB | `VmHWM` of the CLI process |
+| Providers | 19 | `cude providers list` |
+| Agent tools | 22 | `TOOL_DEFINITIONS.length` |
+| Task types routed | 9 | `src/core/selector.ts` |
 
 ## Contributing
 
