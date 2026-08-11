@@ -8,6 +8,7 @@
 
 # Cude Code - Professional AI Development CLI
 
+[![CI](https://github.com/Emrevrg/Cude-Code/actions/workflows/ci.yml/badge.svg)](https://github.com/Emrevrg/Cude-Code/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
@@ -73,7 +74,7 @@ cude run "Create a REST API in TypeScript"
 cude chat
 
 # Use specific provider and model
-cude chat -p anthropic -m claude-3-opus
+cude chat -p anthropic -m claude-opus-5
 
 # Continue a previous session
 cude chat -s my-project
@@ -160,7 +161,7 @@ cude sessions delete <id>
 
 ### Production Quality
 - **OpenAI**: GPT-4 family, most capable
-- **Anthropic**: Claude 3 family, best reasoning
+- **Anthropic**: Claude 5 family (Opus 5, Sonnet 5), best reasoning
 - **Google Gemini**: Latest models, large context
 - **DeepSeek**: Affordable, excellent for code
 
@@ -225,6 +226,8 @@ Supported cost tracking for:
 ## Documentation
 
 - **[Changelog](./CHANGELOG.md)** - Release notes
+- **[Contributing](./CONTRIBUTING.md)** - Development setup and project layout
+- **[Security](./SECURITY.md)** - Reporting vulnerabilities, and what the agent can reach
 
 ## Configuration
 

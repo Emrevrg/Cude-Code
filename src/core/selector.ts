@@ -129,7 +129,7 @@ function selectByTaskType(taskType: TaskType): ProviderModelPair {
       if (anthropicKey) {
         return {
           provider: getProvider('anthropic'),
-          model: 'claude-opus-4-8',
+          model: 'claude-opus-5',
           reason: 'Powerful model for research (no live web)',
         };
       }
@@ -148,7 +148,7 @@ function selectByTaskType(taskType: TaskType): ProviderModelPair {
       if (anthropicKey) {
         return {
           provider: getProvider('anthropic'),
-          model: 'claude-opus-4-8',
+          model: 'claude-opus-5',
           reason: 'Best available reasoning model',
         };
       }
@@ -185,7 +185,7 @@ function selectByTaskType(taskType: TaskType): ProviderModelPair {
       if (anthropicKey) {
         return {
           provider: getProvider('anthropic'),
-          model: 'claude-sonnet-4-6',
+          model: 'claude-sonnet-5',
           reason: 'Best for code tasks',
         };
       }
@@ -211,7 +211,7 @@ function selectByTaskType(taskType: TaskType): ProviderModelPair {
       if (anthropicKey) {
         return {
           provider: getProvider('anthropic'),
-          model: 'claude-opus-4-8',
+          model: 'claude-opus-5',
           reason: 'Best for complex tasks',
         };
       }
@@ -253,7 +253,7 @@ function selectByTaskType(taskType: TaskType): ProviderModelPair {
       if (anthropicKey) {
         return {
           provider: getProvider('anthropic'),
-          model: 'claude-sonnet-4-6',
+          model: 'claude-sonnet-5',
           reason: 'Versatile general-purpose model',
         };
       }
@@ -278,7 +278,7 @@ function selectByTaskType(taskType: TaskType): ProviderModelPair {
       if (anthropicKey) {
         return {
           provider: getProvider('anthropic'),
-          model: 'claude-sonnet-4-6',
+          model: 'claude-sonnet-5',
           reason: 'Strong writing quality',
         };
       }
