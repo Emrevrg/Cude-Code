@@ -12,12 +12,9 @@ import { join } from 'node:path';
 const { executeTool, TOOL_DEFINITIONS } = await import('../dist/core/tools.js');
 
 let dir;
-let page;
 
 before(() => {
   dir = mkdtempSync(join(tmpdir(), 'cude-test-'));
-  page = join(dir, 'page.html');
-  writeFileSync(page, '<html><head><title>T</title></head><body><h1 id="h">Hi</h1></body></html>');
 });
 
 after(() => rmSync(dir, { recursive: true, force: true }));
@@ -175,6 +172,18 @@ describe('parameter validation', () => {
 });
 
 describe('browser', { skip: (await chromiumAvailable()) ? false : 'Chromium not installed' }, () => {
+  // Its own directory rather than the root fixture: these tests are the
+  // slowest in the file, and one run where the root `after` hook removed `dir`
+  // first failed all three with ERR_FILE_NOT_FOUND.
+  let bdir;
+  let page;
+  before(() => {
+    bdir = mkdtempSync(join(tmpdir(), 'cude-browser-'));
+    page = join(bdir, 'page.html');
+    writeFileSync(page, '<html><head><title>T</title></head><body><h1 id="h">Hi</h1></body></html>');
+  });
+  after(() => rmSync(bdir, { recursive: true, force: true }));
+
   test('navigate returns page content', async () => {
     const res = await ok('browser_navigate', { url: `file://${page}` });
     assert.match(res.output, /Hi/);
@@ -186,7 +195,7 @@ describe('browser', { skip: (await chromiumAvailable()) ? false : 'Chromium not 
   });
 
   test('screenshot writes a file', async () => {
-    const out = join(dir, 'shot.png');
+    const out = join(bdir, 'shot.png');
     await ok('browser_screenshot', { url: `file://${page}`, output: out });
     assert.ok(existsSync(out), 'screenshot file was not created');
   });
