@@ -86,13 +86,23 @@ test('the version is the same in package.json, the CLI and the banner', () => {
 test('every dependency is actually imported somewhere in src/', async () => {
   // 67MB of unused dependencies shipped once. Playwright is loaded through a
   // dynamic import, so match the bare name rather than an import statement.
-  const { execSync } = await import('node:child_process');
-  const src = execSync('cat $(find src -name "*.ts")', {
-    cwd: fileURLToPath(root),
-    encoding: 'utf8',
-    maxBuffer: 1e8,
-  });
+  const { readdirSync, readFileSync, statSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const rootPath = fileURLToPath(root);
+
+  const src = [];
+  const walk = (dir) => {
+    for (const item of readdirSync(dir)) {
+      const full = join(dir, item);
+      const s = statSync(full);
+      if (s.isDirectory()) walk(full);
+      else if (item.endsWith('.ts')) src.push(readFileSync(full, 'utf8'));
+    }
+  };
+  walk(join(rootPath, 'src'));
+  const all = src.join('\n');
+
   for (const dep of Object.keys(pkg.dependencies)) {
-    assert.ok(src.includes(dep), `${dep} is a dependency but is never referenced in src/`);
+    assert.ok(all.includes(dep), `${dep} is a dependency but is never referenced in src/`);
   }
 });

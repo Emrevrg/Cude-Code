@@ -808,21 +808,60 @@ async function executeGrepSearch(pattern: string, directory: string, filePattern
     if (!existsSync(resolved)) {
       return { success: false, output: '', error: `Directory not found: ${directory}` };
     }
-    
-    let grepCmd = `grep -r "${pattern}" "${resolved}"`;
-    if (filePattern) {
-      grepCmd += ` --include="${filePattern}"`;
-    }
-    
+
+    let regex: RegExp;
     try {
-      const { stdout } = await execAsync(grepCmd);
-      return { success: true, output: stdout || 'No matches found' };
+      regex = new RegExp(pattern);
     } catch (err: any) {
-      if (err.code === 1) {
-        return { success: true, output: 'No matches found' };
-      }
-      throw err;
+      return {
+        success: false,
+        output: '',
+        error: `Invalid regex pattern: ${err instanceof Error ? err.message : String(err)}`,
+      };
     }
+
+    const SKIP = new Set(['node_modules', '.git', 'dist', 'build', '.next', '__pycache__', '.venv', 'venv', 'vendor', '.cache', 'coverage', 'target', 'bin', 'obj']);
+    const includeRE = filePattern ? new RegExp(filePattern.replace(/\./g, '\\.')) : null;
+    const matches: string[] = [];
+
+    const walk = (dir: string) => {
+      for (const item of readdirSync(dir)) {
+        if (SKIP.has(item)) continue;
+        const full = join(dir, item);
+        let stat;
+        try {
+          stat = statSync(full);
+        } catch {
+          continue;
+        }
+        if (stat.isDirectory()) {
+          walk(full);
+        } else if (stat.isFile()) {
+          if (includeRE && !includeRE.test(item)) continue;
+          let content: string;
+          try {
+            content = readFileSync(full, 'utf-8');
+          } catch {
+            continue;
+          }
+          const rel = full.replace(resolved, '.');
+          const lines = content.split('\n');
+          for (let i = 0; i < lines.length; i++) {
+            if (regex.test(lines[i])) {
+              matches.push(`${rel}:${i + 1}:${lines[i]}`);
+            }
+            regex.lastIndex = 0;
+          }
+        }
+      }
+    };
+
+    walk(resolved);
+    if (regex.global) regex.lastIndex = 0;
+    return {
+      success: true,
+      output: matches.length > 0 ? matches.slice(0, 500).join('\n') : 'No matches found',
+    };
   } catch (err) {
     return { success: false, output: '', error: `Failed to search: ${err instanceof Error ? err.message : String(err)}` };
   }

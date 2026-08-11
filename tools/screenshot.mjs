@@ -1,9 +1,10 @@
 import { chromium } from 'playwright';
 
 const [, , url, out, w, h] = process.argv;
+const EXE = process.env.CUDE_CHROME_PATH || undefined;
 
 const browser = await chromium.launch({
-  executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+  executablePath: EXE,
   args: ['--no-sandbox'],
 });
 const page = await browser.newPage({
