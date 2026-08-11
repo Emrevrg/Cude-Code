@@ -11,3 +11,6 @@ dist/
 *.swo
 *~
 .idea/
+
+# Local README preview render
+.readme-preview.html
