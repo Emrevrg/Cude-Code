@@ -4,14 +4,14 @@ import { selectProviderAndModel, type TaskType } from '../core/selector.js';
 import {
   createSession,
   findSessionByName,
-  loadSession,
+
   saveSession,
   addMessageToSession,
   updateSessionCost,
   listSessions,
 } from '../storage/sessions.js';
 import { recordSpending, checkBudgetAlert, loadBudget } from '../storage/budget.js';
-import { showBanner, renderMarkdown, showCostInfo, showError, showInfo, showSessionTable } from '../ui/display.js';
+import { showBanner, showCostInfo, showError, showInfo, showSessionTable } from '../ui/display.js';
 import type { Message } from '../providers/types.js';
 import type { Session } from '../storage/sessions.js';
 
@@ -50,11 +50,13 @@ export async function runChat(options: ChatCommandOptions = {}): Promise<void> {
   } = options;
 
   // Select provider and model
-  let { provider, model, reason } = selectProviderAndModel(taskType, {
+  const selection = selectProviderAndModel(taskType, {
     free,
     preferredProvider,
     preferredModel,
   });
+  const { reason } = selection;
+  let { provider, model } = selection;
 
   // Load or create session
   let session: Session | null = null;

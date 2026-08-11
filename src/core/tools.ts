@@ -325,10 +325,41 @@ export function setConfirmCallback(fn: ConfirmCallback): void {
   confirmCallback = fn;
 }
 
+/**
+ * Checks a call against the tool's declared `required` parameters.
+ * Without this a missing argument surfaces as whatever low-level error the
+ * implementation happens to throw (e.g. `paths[0] must be of type string`),
+ * which tells the model nothing about how to retry.
+ */
+function findMissingParams(name: string, args: Record<string, unknown>): string[] {
+  const def = TOOL_DEFINITIONS.find((d) => d.name === name);
+  const required = (def?.parameters as { required?: unknown })?.required;
+  if (!Array.isArray(required)) return [];
+  return required.filter(
+    (key): key is string =>
+      typeof key === 'string' && (args[key] === undefined || args[key] === null)
+  );
+}
+
 export async function executeTool(
   name: string,
   args: Record<string, unknown>
 ): Promise<ToolResult> {
+  const missing = findMissingParams(name, args);
+  if (missing.length > 0) {
+    const def = TOOL_DEFINITIONS.find((d) => d.name === name);
+    const known = Object.keys(
+      ((def?.parameters as { properties?: Record<string, unknown> })?.properties) ?? {}
+    );
+    return {
+      success: false,
+      output: '',
+      error:
+        `Missing required parameter(s) for ${name}: ${missing.join(', ')}. ` +
+        `Accepted parameters: ${known.join(', ')}.`,
+    };
+  }
+
   switch (name) {
     case 'read_file':
       return executeReadFile(args.path as string, args.start_line as number | undefined, args.end_line as number | undefined);
@@ -711,16 +742,39 @@ function executeGetFileInfo(filePath: string): ToolResult {
   }
 }
 
+/**
+ * The tool accepts "glob pattern or regex". A bare filename glob such as
+ * `*.ts` is the most natural thing to pass and is not valid regex — feeding it
+ * straight to RegExp throws "Nothing to repeat" — so translate globs first and
+ * only fall back to regex for anything that is clearly not one.
+ */
+function patternToRegExp(pattern: string): RegExp {
+  const looksLikeGlob = /[*?]/.test(pattern) && !/[()+^$|\\]/.test(pattern);
+  if (looksLikeGlob) {
+    const source = pattern
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replace(/\*/g, '.*')
+      .replace(/\?/g, '.');
+    return new RegExp(`^${source}$`, 'i');
+  }
+  try {
+    return new RegExp(pattern, 'i');
+  } catch {
+    // Neither a glob nor valid regex — match it literally rather than throwing.
+    return new RegExp(pattern.replace(/[.*+^${}()|[\]\\?]/g, '\\$&'), 'i');
+  }
+}
+
 function executeSearchFiles(pattern: string, directory: string): ToolResult {
   try {
     const resolved = resolve(directory);
     if (!existsSync(resolved)) {
       return { success: false, output: '', error: `Directory not found: ${directory}` };
     }
-    
+
     const results: string[] = [];
-    const searchPattern = new RegExp(pattern, 'i');
-    
+    const searchPattern = patternToRegExp(pattern);
+
     const walk = (dir: string) => {
       const items = readdirSync(dir);
       for (const item of items) {
@@ -728,7 +782,13 @@ function executeSearchFiles(pattern: string, directory: string): ToolResult {
           results.push(join(dir, item).replace(resolved, '.'));
         }
         const fullPath = join(dir, item);
-        const stat = statSync(fullPath);
+        // Broken symlinks and races would otherwise abort the whole search.
+        let stat;
+        try {
+          stat = statSync(fullPath);
+        } catch {
+          continue;
+        }
         if (stat.isDirectory() && !item.startsWith('.')) {
           walk(fullPath);
         }

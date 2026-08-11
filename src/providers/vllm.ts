@@ -1,5 +1,5 @@
 import { getApiKey } from '../config/index.js';
-import { calculateCost, estimateTokens, getModelsByProvider } from '../config/models.js';
+import { estimateTokens, getModelsByProvider } from '../config/models.js';
 import type {
   Provider,
   Message,
