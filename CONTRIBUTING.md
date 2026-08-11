@@ -30,8 +30,15 @@ npm run lint         # eslint, must report 0 errors
 npm run build        # tsc
 ```
 
-CI runs these on Node 18, 20 and 22, so a change that passes locally on one
-version can still fail — check the matrix if CI is red.
+`.github/workflows/ci.yml` runs these on Node 18, 20 and 22 for every push
+and pull request.
+
+> **GitHub Actions is not currently running for this repository** — jobs are
+> rejected before any step executes, which is an account-level setting rather
+> than anything in the workflow. Enable it under
+> *Settings → Actions → General → Allow all actions*, and check
+> *Settings → Billing → Spending limits* if jobs still fail instantly. Until
+> then, run the three commands above locally before opening a pull request.
 
 ## Project layout
 
