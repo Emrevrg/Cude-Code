@@ -8,7 +8,9 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
+import { toOpenAIWireMessages } from './wire.js';
 
 /**
  * Perplexity AI provider — models have live internet access for real-time web search.
@@ -16,6 +18,7 @@ import type {
 export class PerplexityProvider implements Provider {
   name = 'perplexity';
   displayName = 'Perplexity AI (Web Search)';
+  costClass: CostClass = 'paid';
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('perplexity');
@@ -58,13 +61,10 @@ export class PerplexityProvider implements Provider {
   async chat(messages: Message[], model: string, options: ChatOptions = {}): Promise<ChatResponse> {
     const client = this.getClient();
 
-    const pxMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    if (options.systemPrompt) {
-      pxMessages.push({ role: 'system', content: options.systemPrompt });
-    }
-    for (const m of messages) {
-      pxMessages.push({ role: m.role, content: m.content });
-    }
+    const pxMessages = toOpenAIWireMessages(
+      messages,
+      options.systemPrompt
+    ) as unknown as OpenAI.Chat.ChatCompletionMessageParam[];
 
     const response = await client.chat.completions.create({
       model,
@@ -89,13 +89,10 @@ export class PerplexityProvider implements Provider {
   ): Promise<ChatResponse> {
     const client = this.getClient();
 
-    const pxMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    if (options.systemPrompt) {
-      pxMessages.push({ role: 'system', content: options.systemPrompt });
-    }
-    for (const m of messages) {
-      pxMessages.push({ role: m.role, content: m.content });
-    }
+    const pxMessages = toOpenAIWireMessages(
+      messages,
+      options.systemPrompt
+    ) as unknown as OpenAI.Chat.ChatCompletionMessageParam[];
 
     let fullContent = '';
     let inputTokens = 0;

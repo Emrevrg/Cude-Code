@@ -4,6 +4,8 @@ import { executeTool, TOOL_DEFINITIONS, setConfirmCallback, formatToolCall, form
 import { recordSpending } from '../storage/budget.js';
 import { checkBudgetAlert } from '../storage/budget.js';
 import type { Message } from '../providers/types.js';
+import { validateTurnSequence } from '../providers/wire.js';
+import { MODELS } from '../config/models.js';
 
 export interface AgentOptions {
   task: string;
@@ -17,14 +19,91 @@ export interface AgentOptions {
   onConfirm?: (message: string) => Promise<boolean>;
 }
 
+/**
+ * Why the loop stopped. `completed` is the only reason that can produce
+ * `success: true` — every other value means the agent was cut short and the
+ * caller must treat the run as a failure.
+ */
+export type AgentStopReason =
+  | 'completed'
+  | 'max_iterations'
+  | 'budget_exceeded'
+  | 'empty_output';
+
 export interface AgentResult {
   success: boolean;
+  stopReason: AgentStopReason;
   output: string;
   totalCost: number;
   totalInputTokens: number;
   totalOutputTokens: number;
   iterations: number;
   steps: AgentStep[];
+}
+
+/**
+ * How much of a tool's output reaches the model. The old limits — 500 chars in
+ * the tools loop, 1000 in the ReAct loop — cut a `npm test` result off mid-word
+ * with nothing to say anything had been dropped, so the model reasoned from a
+ * fragment it believed was complete.
+ */
+export const TOOL_RESULT_MAX_CHARS = 8000;
+/** The ReAct loop re-sends the whole transcript each turn, so it keeps less. */
+export const REACT_TOOL_RESULT_MAX_CHARS = 4000;
+
+export function truncateToolOutput(output: string, limit: number): string {
+  if (output.length <= limit) return output;
+  return (
+    output.substring(0, limit) +
+    `\n... [truncated, showed ${limit} of ${output.length} chars]`
+  );
+}
+
+/**
+ * Whether a run costs money. The budget gate used to run before every
+ * iteration regardless of provider, so a $0 limit — or a spent-out monthly cap
+ * — stopped local vLLM and Ollama agents dead even though they charge nothing.
+ *
+ * The provider's own declared cost class is the source of truth.
+ */
+export function isFreeOrLocal(
+  provider: import('../providers/types.js').Provider,
+  model: string
+): boolean {
+  if (provider.costClass === 'local' || provider.costClass === 'free') return true;
+  const catalogued = MODELS[model];
+  if (catalogued) return catalogued.free || catalogued.local;
+  const listed = provider.listModels().find(m => m.id === model);
+  if (listed) return listed.free || listed.local;
+  return false;
+}
+
+export const STOP_REASON_MESSAGES: Record<AgentStopReason, string> = {
+  completed: 'The model finished the task.',
+  max_iterations: 'Hit the iteration limit before the model finished. Raise --max-iterations or narrow the task.',
+  budget_exceeded: 'Stopped by the spending limit. Raise it with "cude budget set" or clear it with "cude budget unset --all".',
+  empty_output: 'The model stopped without producing any output.',
+};
+
+/**
+ * A run only succeeded if the model itself decided it was done *and* it left
+ * something behind. Returning `success: true` for an exhausted loop made
+ * failure indistinguishable from success in CI.
+ */
+function finalize(
+  stopReason: AgentStopReason,
+  output: string,
+  rest: Omit<AgentResult, 'success' | 'stopReason' | 'output'>
+): AgentResult {
+  const trimmed = output.trim();
+  const reason: AgentStopReason =
+    stopReason === 'completed' && trimmed.length === 0 ? 'empty_output' : stopReason;
+  return {
+    success: reason === 'completed',
+    stopReason: reason,
+    output,
+    ...rest,
+  };
 }
 
 export interface AgentStep {
@@ -107,18 +186,33 @@ async function runToolsAgent(
   let iterations = 0;
   const steps: AgentStep[] = [];
   let finalOutput = '';
+  let stopReason: AgentStopReason = 'max_iterations';
+
+  // A free or local provider costs nothing, so a spending limit has no bearing
+  // on it — checking one only takes the agent away from someone at their cap.
+  const budgetApplies = !isFreeOrLocal(provider, model);
 
   while (iterations < maxIterations) {
     iterations++;
 
     // Check budget
-    const budgetCheck = checkBudgetAlert();
-    if (budgetCheck.exceeded) {
-      finalOutput = `Budget exceeded: ${budgetCheck.message}`;
-      break;
+    if (budgetApplies) {
+      const budgetCheck = checkBudgetAlert();
+      if (budgetCheck.exceeded) {
+        finalOutput = `Budget exceeded: ${budgetCheck.message}`;
+        stopReason = 'budget_exceeded';
+        break;
+      }
     }
 
     options.onProgress?.(`Step ${iterations}: Thinking...`);
+
+    // A malformed turn sequence is a bug in this loop, not a model problem —
+    // fail loudly rather than shipping a request that means something else.
+    const violation = validateTurnSequence(messages);
+    if (violation) {
+      throw new Error(`Refusing to send a malformed conversation: ${violation}`);
+    }
 
     const { response, toolCalls } = await provider.chatWithTools!(
       messages,
@@ -143,11 +237,19 @@ async function runToolsAgent(
     // If no tool calls, we're done
     if (toolCalls.length === 0) {
       finalOutput = response.content;
+      stopReason = 'completed';
       break;
     }
 
+    // The assistant message carries the calls it made, so the model can see the
+    // arguments it chose; each result then comes back as its own tool message.
+    messages.push({
+      role: 'assistant',
+      content: response.content,
+      tool_calls: toolCalls,
+    });
+
     // Execute tool calls
-    const toolResults: string[] = [];
     for (const toolCall of toolCalls) {
       options.onProgress?.(`Step ${iterations}: Running ${toolCall.name}...`);
 
@@ -173,35 +275,33 @@ async function runToolsAgent(
         content: result.success ? result.output : `Error: ${result.error}`,
       });
 
-      toolResults.push(
-        `Tool: ${toolCall.name}\nResult: ${result.success ? result.output.substring(0, 500) : `ERROR: ${result.error}`}`
-      );
+      messages.push({
+        role: 'tool',
+        tool_call_id: toolCall.id,
+        name: toolCall.name,
+        content: result.success
+          ? truncateToolOutput(result.output, TOOL_RESULT_MAX_CHARS)
+          : `ERROR: ${result.error}`,
+      });
     }
-
-    // Add assistant message with tool use
-    messages.push({
-      role: 'assistant',
-      content: response.content + '\n\nTool Results:\n' + toolResults.join('\n---\n'),
-    });
 
     // Check if task is complete
     if (response.content.includes('TASK COMPLETE:') || response.content.includes('Task complete:')) {
       finalOutput = response.content;
+      stopReason = 'completed';
       break;
     }
   }
 
   steps.push({ type: 'final', content: finalOutput });
 
-  return {
-    success: true,
-    output: finalOutput,
+  return finalize(stopReason, finalOutput, {
     totalCost,
     totalInputTokens,
     totalOutputTokens,
     iterations,
     steps,
-  };
+  });
 }
 
 async function runReActAgent(
@@ -236,14 +336,20 @@ When done, start with "TASK COMPLETE:" to finish.`;
   let iterations = 0;
   const steps: AgentStep[] = [];
   let finalOutput = '';
+  let stopReason: AgentStopReason = 'max_iterations';
+
+  const budgetApplies = !isFreeOrLocal(provider, model);
 
   while (iterations < maxIterations) {
     iterations++;
 
-    const budgetCheck = checkBudgetAlert();
-    if (budgetCheck.exceeded) {
-      finalOutput = `Budget exceeded: ${budgetCheck.message}`;
-      break;
+    if (budgetApplies) {
+      const budgetCheck = checkBudgetAlert();
+      if (budgetCheck.exceeded) {
+        finalOutput = `Budget exceeded: ${budgetCheck.message}`;
+        stopReason = 'budget_exceeded';
+        break;
+      }
     }
 
     options.onProgress?.(`Step ${iterations}: Thinking...`);
@@ -296,7 +402,7 @@ When done, start with "TASK COMPLETE:" to finish.`;
       }
 
       const resultText = result.success
-        ? result.output.substring(0, 1000)
+        ? truncateToolOutput(result.output, REACT_TOOL_RESULT_MAX_CHARS)
         : `Error: ${result.error}`;
 
       steps.push({ type: 'tool_result', content: resultText });
@@ -310,8 +416,12 @@ When done, start with "TASK COMPLETE:" to finish.`;
       // No tool call - either thinking or final
       steps.push({ type: 'thought', content });
 
-      if (content.includes('TASK COMPLETE:') || content.includes('Task complete:') || iterations >= maxIterations - 1) {
+      // Running out of iterations is not the same as finishing: the old
+      // `iterations >= maxIterations - 1` clause here reported an exhausted
+      // loop as a completed task.
+      if (content.includes('TASK COMPLETE:') || content.includes('Task complete:')) {
         finalOutput = content;
+        stopReason = 'completed';
         messages.push({ role: 'assistant', content });
         break;
       }
@@ -322,18 +432,18 @@ When done, start with "TASK COMPLETE:" to finish.`;
   }
 
   if (!finalOutput) {
-    finalOutput = messages[messages.length - 1]?.content ?? 'Task completed';
+    // Surface whatever the model last said so the caller has something to show,
+    // but leave stopReason alone — this is not a completed run.
+    finalOutput = messages[messages.length - 1]?.content ?? '';
   }
 
   steps.push({ type: 'final', content: finalOutput });
 
-  return {
-    success: true,
-    output: finalOutput,
+  return finalize(stopReason, finalOutput, {
     totalCost,
     totalInputTokens,
     totalOutputTokens,
     iterations,
     steps,
-  };
+  });
 }

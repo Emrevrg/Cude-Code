@@ -93,15 +93,23 @@ export function createCLI(): Command {
 
   configCmd
     .command('set-key <provider> [key]')
-    .description('Set API key for a provider (anthropic|openai|gemini|groq|ollama|openrouter|nvidia|mistral|together|perplexity|deepseek|xai|cohere|azure|litellm|huggingface|vllm|replicate|gguf)')
+    .description('Set an API key, or a <provider>-endpoint URL (azure-endpoint|litellm-endpoint|vllm-endpoint|gguf-endpoint)')
     .action(async (provider: string, key?: string) => {
       const { runConfigSetKey } = await import('./commands/config.js');
       await runConfigSetKey(provider, key);
     });
 
   configCmd
+    .command('set-endpoint <provider> [url]')
+    .description('Set the endpoint URL for a self-hosted provider (azure|litellm|vllm|gguf)')
+    .action(async (provider: string, url?: string) => {
+      const { runConfigSetEndpoint } = await import('./commands/config.js');
+      await runConfigSetEndpoint(provider, url);
+    });
+
+  configCmd
     .command('remove-key <provider>')
-    .description('Remove API key for a provider')
+    .description('Remove an API key or endpoint for a provider')
     .action(async (provider: string) => {
       const { runConfigRemoveKey } = await import('./commands/config.js');
       await runConfigRemoveKey(provider);
@@ -109,7 +117,8 @@ export function createCLI(): Command {
 
   configCmd
     .command('list-keys')
-    .description('List all configured API keys (masked)')
+    .alias('list')
+    .description('List configured API keys (masked), endpoints and defaults')
     .action(async () => {
       const { runConfigListKeys } = await import('./commands/config.js');
       runConfigListKeys();
@@ -117,7 +126,7 @@ export function createCLI(): Command {
 
   configCmd
     .command('set <setting> <value>')
-    .description('Set a configuration value (default-provider, default-model)')
+    .description('Set a configuration value (default-provider, default-model, workspace-root, <provider>-endpoint)')
     .action(async (setting: string, value: string) => {
       const { runConfigSet } = await import('./commands/config.js');
       await runConfigSet(setting, value);
@@ -154,6 +163,18 @@ export function createCLI(): Command {
     });
 
   budgetCmd
+    .command('unset')
+    .description('Remove spending limits (reset only clears counters)')
+    .option('--total', 'Remove the total spending limit')
+    .option('--monthly', 'Remove the monthly spending limit')
+    .option('--alert', 'Remove the alert threshold')
+    .option('--all', 'Remove all limits and the alert threshold')
+    .action(async (options: { total?: boolean; monthly?: boolean; alert?: boolean; all?: boolean }) => {
+      const { runBudgetUnset } = await import('./commands/budget.js');
+      await runBudgetUnset(options);
+    });
+
+  budgetCmd
     .command('reset')
     .description('Reset spending counters (preserves limits)')
     .action(async () => {
@@ -167,6 +188,18 @@ export function createCLI(): Command {
     .action(async (amount: string) => {
       const { runBudgetAlert } = await import('./commands/budget.js');
       await runBudgetAlert(amount);
+    });
+
+  budgetCmd
+    .command('unset')
+    .description('Remove one or more budget limits')
+    .option('--total', 'Clear the total limit')
+    .option('--monthly', 'Clear the monthly limit')
+    .option('--alert', 'Clear the alert threshold')
+    .option('--all', 'Clear all limits')
+    .action(async (options: { total?: boolean; monthly?: boolean; alert?: boolean; all?: boolean }) => {
+      const { runBudgetUnset } = await import('./commands/budget.js');
+      await runBudgetUnset(options);
     });
 
   // ─── SESSIONS COMMAND ─────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import readline from 'readline';
 import chalk from 'chalk';
-import { runAgent } from '../core/agent.js';
+import { runAgent, STOP_REASON_MESSAGES } from '../core/agent.js';
 import { selectProviderAndModel, type TaskType } from '../core/selector.js';
 import { startSpinner, stopSpinner, updateSpinner } from '../ui/spinner.js';
 import { showError, showSuccess, showCostInfo, renderMarkdown } from '../ui/display.js';
@@ -143,6 +143,14 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
 
     if (result.success) {
       showSuccess(`Task completed in ${result.iterations} iteration${result.iterations !== 1 ? 's' : ''}`);
+    } else {
+      // An unfinished run has to be distinguishable from a finished one, both
+      // on screen and in `$?` — CI cannot see the difference otherwise.
+      showError(
+        `Task failed (${result.stopReason}) after ${result.iterations} iteration${result.iterations !== 1 ? 's' : ''}\n` +
+        STOP_REASON_MESSAGES[result.stopReason]
+      );
+      process.exitCode = 1;
     }
 
   } catch (err) {

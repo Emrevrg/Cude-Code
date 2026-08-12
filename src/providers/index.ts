@@ -17,7 +17,7 @@ import { HuggingFaceProvider } from './huggingface.js';
 import { VLLMProvider } from './vllm.js';
 import { ReplicateProvider } from './replicate.js';
 import { LocalGGUFProvider } from './gguf.js';
-import type { Provider } from './types.js';
+import type { Provider, CostClass } from './types.js';
 
 const providers: Provider[] = [
   new AnthropicProvider(),
@@ -40,6 +40,27 @@ const providers: Provider[] = [
   new ReplicateProvider(),
   new LocalGGUFProvider(),
 ];
+
+/**
+ * The Free/Local label, read from provider and model metadata rather than the
+ * hardcoded `name === 'groq' || name === 'ollama'` table the UI used to carry —
+ * which reported vLLM as "Paid" while vLLM hardcodes cost = 0.
+ */
+export function classifyProvider(provider: Provider): CostClass {
+  if (provider.costClass) return provider.costClass;
+
+  const models = provider.listModels();
+  if (models.length === 0) return 'paid';
+  if (models.every(m => m.local)) return 'local';
+  if (models.every(m => m.free || m.local)) return 'free';
+  if (models.some(m => m.free || m.local)) return 'mixed';
+  return 'paid';
+}
+
+/** Providers whose model list comes from a running server, not the catalog. */
+export function isSelfHosted(provider: Provider): boolean {
+  return typeof provider.listRemoteModels === 'function';
+}
 
 export function getProvider(name: string): Provider {
   const provider = providers.find(p => p.name === name);

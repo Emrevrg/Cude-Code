@@ -445,6 +445,24 @@ export const MODELS: Record<string, ModelDefinition> = {
     capabilities: ['general', 'writing', 'summarize'],
     contextWindow: 4096,
   },
+
+  // Self-hosted endpoint catalogs. The server may expose additional models;
+  // these entries provide discoverable defaults and correct cost metadata.
+  'vllm/local-model': {
+    id: 'vllm/local-model', name: 'vLLM local model', provider: 'vllm',
+    pricing: { inputPerMillion: 0, outputPerMillion: 0 }, free: true, local: true,
+    capabilities: ['code', 'general'], contextWindow: 32768,
+  },
+  'gguf/local-model': {
+    id: 'gguf/local-model', name: 'GGUF local model', provider: 'gguf',
+    pricing: { inputPerMillion: 0, outputPerMillion: 0 }, free: true, local: true,
+    capabilities: ['code', 'general'], contextWindow: 32768,
+  },
+  'litellm/local-model': {
+    id: 'litellm/local-model', name: 'LiteLLM configured model', provider: 'litellm',
+    pricing: { inputPerMillion: 0, outputPerMillion: 0 }, free: true, local: true,
+    capabilities: ['code', 'general'], contextWindow: 32768,
+  },
 };
 
 export function getModelsByProvider(provider: string): ModelDefinition[] {

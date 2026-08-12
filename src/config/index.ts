@@ -1,6 +1,6 @@
 import Conf from 'conf';
 import { homedir } from 'os';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { existsSync, renameSync, copyFileSync, readdirSync } from 'fs';
 
 export interface AppConfig {
@@ -13,6 +13,8 @@ export interface AppConfig {
   defaultProvider?: string;
   defaultModel?: string;
   ollamaBaseUrl?: string;
+  /** Root that mutating file tools are confined to. Defaults to process.cwd(). */
+  workspaceRoot?: string;
   budgetAlertThreshold?: number;
   theme?: 'default' | 'minimal';
   firstRun?: boolean;
@@ -28,13 +30,24 @@ const defaultConfig: AppConfig = {
   firstRun: true,
 };
 
-const DATA_DIR = join(homedir(), '.cude');
+/**
+ * Everything Cude persists lives here. `CUDE_HOME` redirects it, which is what
+ * lets the test suite exercise config- and budget-backed behaviour without
+ * writing to (or destroying) the real ~/.cude.
+ */
+export function getDataDir(): string {
+  const override = process.env.CUDE_HOME;
+  if (override && override.trim()) return resolve(override.trim());
+  return join(homedir(), '.cude');
+}
+
 const LEGACY_DATA_DIR = join(homedir(), '.codiente');
 
 // One-time migration from the legacy ~/.codiente directory to ~/.cude.
 // Idempotent: if the legacy dir no longer exists, this is a no-op.
 function migrateLegacyDataDir(): void {
   if (!existsSync(LEGACY_DATA_DIR)) return;
+  const DATA_DIR = getDataDir();
   if (!existsSync(DATA_DIR)) {
     // Whole-sale rename is the simplest path when the new dir doesn't exist yet.
     try {
@@ -71,7 +84,7 @@ export function getConfig(): Conf<AppConfig> {
     configInstance = new Conf<AppConfig>({
       projectName: 'cude-code',
       defaults: defaultConfig,
-      cwd: DATA_DIR,
+      cwd: getDataDir(),
     });
   }
   return configInstance;
@@ -146,6 +159,19 @@ export function setDefaultModel(model: string): void {
   getConfig().set('defaultModel', model);
 }
 
+export function getWorkspaceRootSetting(): string | undefined {
+  try {
+    return getConfig().get('workspaceRoot') as string | undefined;
+  } catch {
+    // Never let an unreadable config block a tool call.
+    return undefined;
+  }
+}
+
+export function setWorkspaceRootSetting(root: string): void {
+  getConfig().set('workspaceRoot', root);
+}
+
 export function getOllamaBaseUrl(): string {
   return (getConfig().get('ollamaBaseUrl') as string | undefined) ?? 'http://localhost:11434';
 }
@@ -159,5 +185,5 @@ export function markFirstRunDone(): void {
 }
 
 export function getConfigPath(): string {
-  return join(homedir(), '.cude');
+  return getDataDir();
 }

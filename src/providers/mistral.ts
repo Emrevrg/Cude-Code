@@ -8,11 +8,14 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
+import { toOpenAIWireMessages } from './wire.js';
 
 export class MistralProvider implements Provider {
   name = 'mistral';
   displayName = 'Mistral AI';
+  costClass: CostClass = 'paid';
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('mistral');
@@ -55,13 +58,10 @@ export class MistralProvider implements Provider {
   async chat(messages: Message[], model: string, options: ChatOptions = {}): Promise<ChatResponse> {
     const client = this.getClient();
 
-    const mistralMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    if (options.systemPrompt) {
-      mistralMessages.push({ role: 'system', content: options.systemPrompt });
-    }
-    for (const m of messages) {
-      mistralMessages.push({ role: m.role, content: m.content });
-    }
+    const mistralMessages = toOpenAIWireMessages(
+      messages,
+      options.systemPrompt
+    ) as unknown as OpenAI.Chat.ChatCompletionMessageParam[];
 
     const response = await client.chat.completions.create({
       model,
@@ -86,13 +86,10 @@ export class MistralProvider implements Provider {
   ): Promise<ChatResponse> {
     const client = this.getClient();
 
-    const mistralMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    if (options.systemPrompt) {
-      mistralMessages.push({ role: 'system', content: options.systemPrompt });
-    }
-    for (const m of messages) {
-      mistralMessages.push({ role: m.role, content: m.content });
-    }
+    const mistralMessages = toOpenAIWireMessages(
+      messages,
+      options.systemPrompt
+    ) as unknown as OpenAI.Chat.ChatCompletionMessageParam[];
 
     let fullContent = '';
     let inputTokens = 0;
