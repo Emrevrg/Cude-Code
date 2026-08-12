@@ -30,6 +30,18 @@ Create a read-only implementation plan before making changes:
 cude plan "Add authentication to the API and cover it with tests"
 ```
 
+Review local changes and inspect optional code-intelligence integrations:
+
+```bash
+cude review
+cude doctor
+cude doctor --json
+```
+
+`doctor` detects installed LSP servers, debuggers, and optional `omp`/`pi`
+bridges. Cude Code does not silently claim LSP or DAP support when the required
+server is absent.
+
 Before an autonomous run, Cude Code automatically loads project instructions
 from `AGENTS.md`, `CLAUDE.md`, or `.cude-context.md` in the current directory
 and its parents. The closest `AGENTS.override.md` replaces the matching file.

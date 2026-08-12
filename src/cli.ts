@@ -242,6 +242,27 @@ export function createCLI(): Command {
       await runPlan(task, options);
     });
 
+  program
+    .command('review')
+    .description('Review uncommitted changes without modifying files')
+    .option('-p, --provider <name>', 'AI provider to use')
+    .option('-m, --model <name>', 'Model to use')
+    .option('--free', 'Use only free providers')
+    .option('--json', 'Print the review as JSON')
+    .action(async (options: { provider?: string; model?: string; free?: boolean; json?: boolean }) => {
+      const { runReview } = await import('./commands/review.js');
+      await runReview(options);
+    });
+
+  program
+    .command('doctor')
+    .description('Check available LSP, debugger, and upstream bridge executables')
+    .option('--json', 'Print capability data as JSON')
+    .action(async (options: { json?: boolean }) => {
+      const { runDoctor } = await import('./commands/doctor.js');
+      await runDoctor(options.json ?? false);
+    });
+
   sessionsCmd
     .command('fork <id> <name>')
     .description('Create a new branch from an existing session')
