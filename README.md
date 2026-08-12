@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="./assets/cude-banner.svg" alt="Cude Code — YAZ. ANLA. ÜRET." width="900">
+  <img src="./assets/cude-banner.png" alt="Cude Code — YAZ. ANLA. ÜRET." width="100%">
 </p>
 
 <p align="center">
-  <img src="./assets/cude-cli.png" alt="Cude Code running in the terminal" width="620">
+  <img src="./assets/cude-cli.svg" alt="Cude Code running in the terminal" width="620">
 </p>
 
 # Cude Code - Professional AI Development CLI

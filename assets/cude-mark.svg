@@ -4,11 +4,18 @@
   <g fill="none" stroke="#ffffff" stroke-width="42" stroke-linecap="round" stroke-linejoin="round">
     <!-- Hexagon opened on the right side: this forms the "C".
          Runs from the upper-right vertex counter-clockwise around to
-         the left leg of the bottom notch. -->
-    <path d="M 429 156 L 256 56 L 83 156 L 83 356 L 230 441 L 230 470"/>
+         the bottom vertex. -->
+    <path d="M 429 156 L 256 56 L 83 156 L 83 356 L 230 441"/>
 
-    <!-- Right leg of the bottom notch, sweeping up to the lower-right vertex. -->
-    <path d="M 282 470 L 282 441 L 429 356"/>
+    <!-- Bottom-right edge, sweeping up to the lower-right vertex. -->
+    <path d="M 282 441 L 429 356"/>
+
+    <!-- The two legs of the bottom notch. Butt caps, not round: a round cap
+         adds half the stroke width below the end point, which made the legs
+         read as feet hanging off the mark rather than as a vertical split
+         through its bottom vertex. -->
+    <path d="M 230 441 L 230 470" stroke-linecap="butt"/>
+    <path d="M 282 441 L 282 470" stroke-linecap="butt"/>
 
     <!-- ">" chevron inside the mark -->
     <path d="M 205 190 L 300 256 L 205 322" stroke-width="38"/>
