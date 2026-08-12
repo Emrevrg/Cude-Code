@@ -7,11 +7,13 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
 
 export class ReplicateProvider implements Provider {
   name = 'replicate';
   displayName = 'Replicate';
+  costClass: CostClass = 'paid';
 
   private getClient() {
     const apiKey = getApiKey('replicate');

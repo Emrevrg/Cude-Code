@@ -9,6 +9,7 @@ import type {
   ModelInfo,
   ToolDefinition,
   ToolCall,
+  CostClass,
 } from './types.js';
 
 import { fetchProvider } from './net.js';
@@ -21,6 +22,7 @@ const fetchVllm = (url: string, init?: RequestInit): Promise<Response> =>
 export class VLLMProvider implements Provider {
   name = 'vllm';
   displayName = 'vLLM (Self-hosted)';
+  costClass: CostClass = 'local';
 
   private getConfig() {
     const endpoint = getApiKey('vllm-endpoint') || 'http://localhost:8000';
@@ -50,6 +52,14 @@ export class VLLMProvider implements Provider {
       free: true,
       local: true,
     }));
+  }
+
+  async listRemoteModels(): Promise<string[]> {
+    const { endpoint } = this.getConfig();
+    const response = await fetchVllm(`${endpoint}/v1/models`);
+    if (!response.ok) throw new Error(`vLLM error: ${response.statusText}`);
+    const data = await response.json() as { data?: Array<{ id: string }> };
+    return (data.data ?? []).map(m => m.id);
   }
 
   supportsTools(): boolean {

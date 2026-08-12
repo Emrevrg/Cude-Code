@@ -3,7 +3,8 @@ import boxen from 'boxen';
 import gradientString from 'gradient-string';
 import { marked } from 'marked';
 import { markedTerminal } from 'marked-terminal';
-import type { Provider } from '../providers/types.js';
+import type { Provider, CostClass } from '../providers/types.js';
+import { classifyProvider } from '../providers/index.js';
 import type { Session } from '../storage/sessions.js';
 
 marked.use(markedTerminal() as Parameters<typeof marked.use>[0]);
@@ -106,6 +107,16 @@ export function showInfo(message: string): void {
   console.log(chalk.cyan('  ℹ ') + message);
 }
 
+/** Reads the provider's own declared cost class — never a name lookup. */
+function costLabel(cost: CostClass): string {
+  switch (cost) {
+    case 'local': return chalk.cyan('Local');
+    case 'free': return chalk.green('Free');
+    case 'mixed': return chalk.green('Free/Paid');
+    default: return chalk.dim('Paid');
+  }
+}
+
 export function showProviderTable(providers: Array<{ provider: Provider; available: boolean }>): void {
   const nameWidth = 22;
   const statusWidth = 14;
@@ -130,11 +141,7 @@ export function showProviderTable(providers: Array<{ provider: Provider; availab
     } else {
       status = chalk.dim('○ Not configured').padEnd(statusWidth + 9);
     }
-    const isFree = provider.name === 'groq' || provider.name === 'ollama';
-    const isLocal = provider.name === 'ollama';
-    const freeLabel = isLocal ? chalk.cyan('Local') : isFree ? chalk.green('Free') : chalk.dim('Paid');
-
-    console.log(chalk.white(name) + status + freeLabel);
+    console.log(chalk.white(name) + status + costLabel(classifyProvider(provider)));
   }
   console.log();
 }

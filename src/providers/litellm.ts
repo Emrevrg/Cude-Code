@@ -9,6 +9,7 @@ import type {
   ModelInfo,
   ToolDefinition,
   ToolCall,
+  CostClass,
 } from './types.js';
 
 import { fetchProvider } from './net.js';
@@ -21,6 +22,7 @@ const fetchLiteLLM = (url: string, init?: RequestInit): Promise<Response> =>
 export class LiteLLMProvider implements Provider {
   name = 'litellm';
   displayName = 'LiteLLM Proxy';
+  costClass: CostClass = 'mixed';
 
   private getConfig() {
     const endpoint = getApiKey('litellm-endpoint') || 'http://localhost:8000';
@@ -53,6 +55,16 @@ export class LiteLLMProvider implements Provider {
       free: m.free,
       local: m.local,
     }));
+  }
+
+  async listRemoteModels(): Promise<string[]> {
+    const { endpoint, apiKey } = this.getConfig();
+    const headers: Record<string, string> = {};
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+    const response = await fetchLiteLLM(`${endpoint}/models`, { headers });
+    if (!response.ok) throw new Error(`LiteLLM error: ${response.statusText}`);
+    const data = await response.json() as { data?: Array<{ id: string }> };
+    return (data.data ?? []).map(m => m.id);
   }
 
   supportsTools(): boolean {

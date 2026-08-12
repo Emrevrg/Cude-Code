@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { listProviders } from '../providers/index.js';
+import { listProviders, getProvider, isSelfHosted } from '../providers/index.js';
 import { MODELS } from '../config/models.js';
 import { showProviderTable, showModelTable } from '../ui/display.js';
 import { startSpinner, stopSpinner } from '../ui/spinner.js';
@@ -78,6 +78,57 @@ export async function runProvidersTest(): Promise<void> {
   console.log();
 }
 
+/**
+ * Prints what a self-hosted provider serves: the live model list when the
+ * server is reachable, and how to find it otherwise. Returns false when the
+ * provider is not self-hosted, so the caller can fall back.
+ */
+export async function showSelfHostedModels(providerName: string): Promise<boolean> {
+  let provider;
+  try {
+    provider = getProvider(providerName);
+  } catch {
+    return false;
+  }
+  if (!isSelfHosted(provider)) return false;
+
+  console.log();
+  console.log(chalk.bold.cyan(`  ${provider.displayName}`));
+  console.log(chalk.dim('  ─'.repeat(40)));
+  console.log(
+    chalk.dim('  This provider has no fixed model catalog — the model name is\n') +
+    chalk.dim('  whatever the running server has loaded.')
+  );
+  console.log();
+
+  try {
+    const models = await provider.listRemoteModels!();
+    if (models.length > 0) {
+      console.log(chalk.bold.white('  Served right now:'));
+      for (const id of models) {
+        console.log(`    ${chalk.white(id.padEnd(40))} ${chalk.cyan('[local free]')}`);
+      }
+      console.log();
+      console.log(chalk.dim('  Use: ') + chalk.cyan(`cude run "task" -p ${provider.name} -m ${models[0]}`));
+      console.log();
+      return true;
+    }
+    console.log(chalk.yellow('  The server is reachable but reports no models.'));
+  } catch {
+    console.log(chalk.yellow('  The server is not reachable right now.'));
+  }
+
+  console.log();
+  console.log(chalk.dim('  Point Cude at it, then ask it what it serves:'));
+  console.log(chalk.cyan(`    cude config set-endpoint ${provider.name} <url>`));
+  console.log(chalk.cyan(`    cude providers models ${provider.name}`));
+  console.log();
+  console.log(chalk.dim('  Then pass the id with -m:'));
+  console.log(chalk.cyan(`    cude run "task" -p ${provider.name} -m <model-id>`));
+  console.log();
+  return true;
+}
+
 export async function runProvidersModels(providerFilter?: string): Promise<void> {
   const allModels = Object.values(MODELS).map(m => ({
     id: m.id,
@@ -93,6 +144,10 @@ export async function runProvidersModels(providerFilter?: string): Promise<void>
     : allModels;
 
   if (filtered.length === 0) {
+    // Self-hosted providers have no fixed catalog: the model name is whatever
+    // the running server has loaded. "No models found" made -m mandatory but
+    // undiscoverable.
+    if (providerFilter && (await showSelfHostedModels(providerFilter))) return;
     console.log(chalk.yellow(`  No models found for provider: ${providerFilter}`));
     return;
   }

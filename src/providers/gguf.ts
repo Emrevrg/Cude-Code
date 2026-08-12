@@ -7,6 +7,7 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
 
 import { fetchProvider } from './net.js';
@@ -18,6 +19,7 @@ const fetchGguf = (url: string, init?: RequestInit): Promise<Response> =>
 export class LocalGGUFProvider implements Provider {
   name = 'gguf';
   displayName = 'Local GGUF (llama.cpp)';
+  costClass: CostClass = 'local';
 
   private getConfig() {
     const endpoint = getApiKey('gguf-endpoint') || 'http://localhost:8080';
@@ -47,6 +49,14 @@ export class LocalGGUFProvider implements Provider {
       free: true,
       local: true,
     }));
+  }
+
+  async listRemoteModels(): Promise<string[]> {
+    const { endpoint } = this.getConfig();
+    const response = await fetchGguf(`${endpoint}/v1/models`);
+    if (!response.ok) throw new Error(`llama.cpp server error: ${response.statusText}`);
+    const data = await response.json() as { data?: Array<{ id: string }> };
+    return (data.data ?? []).map(m => m.id);
   }
 
   supportsTools(): boolean {

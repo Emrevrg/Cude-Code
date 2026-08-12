@@ -59,19 +59,18 @@ export function truncateToolOutput(output: string, limit: number): string {
   );
 }
 
-/** Providers that never bill: whatever they serve runs on your own hardware. */
-const LOCAL_PROVIDERS = new Set(['ollama', 'vllm', 'gguf']);
-
 /**
  * Whether a run costs money. The budget gate used to run before every
  * iteration regardless of provider, so a $0 limit — or a spent-out monthly cap
  * — stopped local vLLM and Ollama agents dead even though they charge nothing.
+ *
+ * The provider's own declared cost class is the source of truth.
  */
 export function isFreeOrLocal(
   provider: import('../providers/types.js').Provider,
   model: string
 ): boolean {
-  if (LOCAL_PROVIDERS.has(provider.name)) return true;
+  if (provider.costClass === 'local' || provider.costClass === 'free') return true;
   const catalogued = MODELS[model];
   if (catalogued) return catalogued.free || catalogued.local;
   const listed = provider.listModels().find(m => m.id === model);

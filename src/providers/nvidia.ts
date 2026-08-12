@@ -8,12 +8,14 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
 import { toOpenAIWireMessages } from './wire.js';
 
 export class NvidiaProvider implements Provider {
   name = 'nvidia';
   displayName = 'NVIDIA NIM';
+  costClass: CostClass = 'paid';
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('nvidia');

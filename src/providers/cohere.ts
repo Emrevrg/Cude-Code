@@ -8,12 +8,14 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
 import { toOpenAIWireMessages } from './wire.js';
 
 export class CohereProvider implements Provider {
   name = 'cohere';
   displayName = 'Cohere';
+  costClass: CostClass = 'paid';
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('cohere');

@@ -10,12 +10,14 @@ import type {
   ModelInfo,
   ToolDefinition,
   ToolCall,
+  CostClass,
 } from './types.js';
 import { toOpenAIWireMessages } from './wire.js';
 
 export class OpenAIProvider implements Provider {
   name = 'openai';
   displayName = 'OpenAI GPT';
+  costClass: CostClass = 'paid';
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('openai');

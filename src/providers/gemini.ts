@@ -8,11 +8,13 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
 
 export class GeminiProvider implements Provider {
   name = 'gemini';
   displayName = 'Google Gemini';
+  costClass: CostClass = 'mixed';
 
   private getClient(): GoogleGenerativeAI {
     const apiKey = getApiKey('gemini');

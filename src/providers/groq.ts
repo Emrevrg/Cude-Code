@@ -8,12 +8,14 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
 import { toOpenAIWireMessages } from './wire.js';
 
 export class GroqProvider implements Provider {
   name = 'groq';
   displayName = 'Groq (Free)';
+  costClass: CostClass = 'free';
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('groq');

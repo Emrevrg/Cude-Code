@@ -8,12 +8,14 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
 import { toOpenAIWireMessages } from './wire.js';
 
 export class OpenRouterProvider implements Provider {
   name = 'openrouter';
   displayName = 'OpenRouter';
+  costClass: CostClass = 'mixed';
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('openrouter');

@@ -8,6 +8,7 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
 import { toOpenAIWireMessages } from './wire.js';
 
@@ -17,6 +18,7 @@ import { toOpenAIWireMessages } from './wire.js';
 export class PerplexityProvider implements Provider {
   name = 'perplexity';
   displayName = 'Perplexity AI (Web Search)';
+  costClass: CostClass = 'paid';
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('perplexity');

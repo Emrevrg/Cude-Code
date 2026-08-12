@@ -10,12 +10,14 @@ import type {
   ModelInfo,
   ToolDefinition,
   ToolCall,
+  CostClass,
 } from './types.js';
 import { toAnthropicWireMessages } from './wire.js';
 
 export class AnthropicProvider implements Provider {
   name = 'anthropic';
   displayName = 'Anthropic Claude';
+  costClass: CostClass = 'paid';
 
   private getClient(): Anthropic {
     const apiKey = getApiKey('anthropic');
