@@ -223,6 +223,52 @@ export function createCLI(): Command {
       await runBudgetAlert(amount);
     });
 
+  // ─── CHECKPOINT COMMAND ───────────────────────────────────────────────────
+  const checkpointCmd = program
+    .command('checkpoint')
+    .alias('checkpoints')
+    .description('Undo agent file edits');
+
+  checkpointCmd
+    .command('list', { isDefault: true })
+    .description('List checkpoints, grouped by agent run')
+    .action(async () => {
+      const { runCheckpointList } = await import('./commands/checkpoint.js');
+      runCheckpointList();
+    });
+
+  checkpointCmd
+    .command('show <id>')
+    .description('Show what a checkpoint captured')
+    .action(async (id: string) => {
+      const { runCheckpointShow } = await import('./commands/checkpoint.js');
+      runCheckpointShow(id);
+    });
+
+  checkpointCmd
+    .command('restore <id>')
+    .description('Undo a single tool call')
+    .action(async (id: string) => {
+      const { runCheckpointRestore } = await import('./commands/checkpoint.js');
+      runCheckpointRestore(id);
+    });
+
+  checkpointCmd
+    .command('restore-run <runId>')
+    .description('Undo every file change made by an agent run')
+    .action(async (runId: string) => {
+      const { runCheckpointRestoreRun } = await import('./commands/checkpoint.js');
+      runCheckpointRestoreRun(runId);
+    });
+
+  checkpointCmd
+    .command('clear')
+    .description('Delete all checkpoints')
+    .action(async () => {
+      const { runCheckpointClear } = await import('./commands/checkpoint.js');
+      await runCheckpointClear();
+    });
+
   // ─── SESSIONS COMMAND ─────────────────────────────────────────────────────
   const sessionsCmd = program
     .command('sessions')

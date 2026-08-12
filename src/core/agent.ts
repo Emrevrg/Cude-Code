@@ -8,6 +8,8 @@ import { validateTurnSequence } from '../providers/wire.js';
 import { MODELS } from '../config/models.js';
 import { getMode, toolsForMode, checkToolCall, DEFAULT_MODE, type AgentMode } from './modes.js';
 import { buildRulesPrompt } from './rules.js';
+import { recordCheckpoint, pruneCheckpoints } from './checkpoints.js';
+import { randomUUID } from 'crypto';
 
 export interface AgentOptions {
   task: string;
@@ -43,6 +45,8 @@ export interface AgentResult {
   totalOutputTokens: number;
   iterations: number;
   steps: AgentStep[];
+  /** Identifies this run's checkpoints: `cude checkpoint restore-run <id>`. */
+  runId: string;
 }
 
 /**
@@ -156,6 +160,8 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
   } = options;
 
   const mode = getMode(options.mode ?? DEFAULT_MODE);
+  // Checkpoints accumulate across runs; trim before adding more.
+  pruneCheckpoints();
 
   if (onConfirm) {
     setConfirmCallback(onConfirm);
@@ -193,6 +199,7 @@ async function runToolsAgent(
 ): Promise<AgentResult> {
   const systemPrompt = buildSystemPrompt(mode);
   const tools = toolsForMode(mode);
+  const runId = randomUUID().slice(0, 8);
   const messages: Message[] = [
     { role: 'user', content: options.task },
   ];
@@ -284,6 +291,10 @@ async function runToolsAgent(
       // Prompt-level restriction is not restriction; the mode's budget is
       // enforced here too, not just by omitting the tool definition.
       const refusal = checkToolCall(mode, toolCall.name, toolCall.arguments);
+      if (!refusal) {
+        // Capture the pre-state so a wrong edit is reversible.
+        recordCheckpoint(runId, options.task, toolCall.name, toolCall.arguments);
+      }
       const result = refusal
         ? { success: false, output: '', error: refusal }
         : await executeTool(toolCall.name, toolCall.arguments);
@@ -323,6 +334,7 @@ async function runToolsAgent(
     totalOutputTokens,
     iterations,
     steps,
+    runId,
   });
 }
 
@@ -334,6 +346,7 @@ async function runReActAgent(
   mode: AgentMode
 ): Promise<AgentResult> {
   const tools = toolsForMode(mode);
+  const runId = randomUUID().slice(0, 8);
   const toolDescriptions = tools.map(t =>
     `- ${t.name}: ${t.description}`
   ).join('\n');
@@ -420,6 +433,9 @@ When done, start with "TASK COMPLETE:" to finish.`;
       }
 
       const refusal = checkToolCall(mode, toolName, toolArgs);
+      if (!refusal) {
+        recordCheckpoint(runId, options.task, toolName, toolArgs);
+      }
       const result = refusal
         ? { success: false, output: '', error: refusal }
         : await executeTool(toolName, toolArgs);
@@ -472,5 +488,6 @@ When done, start with "TASK COMPLETE:" to finish.`;
     totalOutputTokens,
     iterations,
     steps,
+    runId,
   });
 }
