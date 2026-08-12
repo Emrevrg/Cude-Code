@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { getApiKey } from '../config/index.js';
 import { calculateCost, estimateTokens, getModelsByProvider } from '../config/models.js';
+import { toOpenAIMessages } from './openai-mapping.js';
 import type {
   Provider,
   Message,
@@ -11,7 +12,7 @@ import type {
 } from './types.js';
 
 /**
- * Perplexity AI provider — models have live internet access for real-time web search.
+ * Perplexity AI provider â€” models have live internet access for real-time web search.
  */
 export class PerplexityProvider implements Provider {
   name = 'perplexity';
@@ -62,9 +63,7 @@ export class PerplexityProvider implements Provider {
     if (options.systemPrompt) {
       pxMessages.push({ role: 'system', content: options.systemPrompt });
     }
-    for (const m of messages) {
-      pxMessages.push({ role: m.role, content: m.content });
-    }
+    pxMessages.push(...toOpenAIMessages(messages));
 
     const response = await client.chat.completions.create({
       model,
@@ -93,9 +92,7 @@ export class PerplexityProvider implements Provider {
     if (options.systemPrompt) {
       pxMessages.push({ role: 'system', content: options.systemPrompt });
     }
-    for (const m of messages) {
-      pxMessages.push({ role: m.role, content: m.content });
-    }
+    pxMessages.push(...toOpenAIMessages(messages));
 
     let fullContent = '';
     let inputTokens = 0;

@@ -106,3 +106,63 @@ describe('F1 — agent reports failure correctly', () => {
     }
   });
 });
+
+describe('F2 — tool results travel through the tool-call protocol', () => {
+  test('F2: the assistant message carries tool_calls and each result is a role:tool message with the matching tool_call_id', async () => {
+    process.env[ENDPOINT_ENV] = `http://127.0.0.1:${stub.port}`;
+    const { resetSpending } = await import('../dist/storage/budget.js');
+    resetSpending();
+
+    const result = await runAgent({
+      task: 'use a tool',
+      provider: 'vllm',
+      model: 'stub-model',
+      maxIterations: 2,
+    });
+
+    // After a tool round-trip the agent issues a second request whose message
+    // history must include the prior assistant tool_calls and the role:'tool'
+    // reply keyed by tool_call_id.
+    assert.ok(stub.requests.length >= 2, 'expected at least two requests (one per iteration)');
+    const last = stub.requests[stub.requests.length - 1];
+    const msgs = last.body.messages;
+
+    const assistantWithTools = [...msgs].reverse().find((m) => m.role === 'assistant' && Array.isArray(m.tool_calls) && m.tool_calls.length > 0);
+    assert.ok(assistantWithTools, 'an assistant message must carry tool_calls');
+
+    const toolMessages = msgs.filter((m) => m.role === 'tool');
+    assert.ok(toolMessages.length > 0, 'at least one role:tool message must be present');
+    for (const tm of toolMessages) {
+      assert.ok(tm.tool_call_id, 'every tool message must carry a tool_call_id');
+      assert.ok(
+        assistantWithTools.tool_calls.some((tc) => tc.id === tm.tool_call_id),
+        `tool message tool_call_id "${tm.tool_call_id}" does not match any assistant tool_call`
+      );
+    }
+  });
+
+  test('F2: no outbound request ever contains two consecutive assistant messages', async () => {
+    process.env[ENDPOINT_ENV] = `http://127.0.0.1:${stub.port}`;
+    const { resetSpending } = await import('../dist/storage/budget.js');
+    resetSpending();
+
+    await runAgent({
+      task: 'keep using tools',
+      provider: 'vllm',
+      model: 'stub-model',
+      maxIterations: 3,
+    });
+
+    assert.ok(stub.requests.length > 0, 'expected requests');
+    for (const req of stub.requests) {
+      assert.equal(
+        hasConsecutiveAssistants(req),
+        false,
+        'a request contained two consecutive assistant messages'
+      );
+      // Invariant: never ends on an assistant message before a request is sent
+      const roles = rolesOf(req);
+      assert.notEqual(roles[roles.length - 1], 'assistant', 'request must not end on an assistant message');
+    }
+  });
+});

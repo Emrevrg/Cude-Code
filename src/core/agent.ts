@@ -182,11 +182,21 @@ async function runToolsAgent(
       );
     }
 
-    // Add assistant message with tool use
+    // Add the assistant message carrying its tool_calls, then one role:'tool'
+    // message per call keyed by tool_call_id so the provider can route results.
     messages.push({
       role: 'assistant',
-      content: response.content + '\n\nTool Results:\n' + toolResults.join('\n---\n'),
+      content: response.content ?? '',
+      tool_calls: toolCalls,
     });
+    for (let i = 0; i < toolCalls.length; i++) {
+      const toolCall = toolCalls[i];
+      messages.push({
+        role: 'tool',
+        content: toolResults[i],
+        tool_call_id: toolCall.id,
+      });
+    }
 
     // Check if task is complete
     if (response.content.includes('TASK COMPLETE:') || response.content.includes('Task complete:')) {

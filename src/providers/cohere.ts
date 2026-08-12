@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { getApiKey } from '../config/index.js';
 import { calculateCost, estimateTokens, getModelsByProvider } from '../config/models.js';
+import { toOpenAIMessages } from './openai-mapping.js';
 import type {
   Provider,
   Message,
@@ -59,9 +60,7 @@ export class CohereProvider implements Provider {
     if (options.systemPrompt) {
       cohereMessages.push({ role: 'system', content: options.systemPrompt });
     }
-    for (const m of messages) {
-      cohereMessages.push({ role: m.role, content: m.content });
-    }
+    cohereMessages.push(...toOpenAIMessages(messages));
 
     const response = await client.chat.completions.create({
       model,
@@ -90,9 +89,7 @@ export class CohereProvider implements Provider {
     if (options.systemPrompt) {
       cohereMessages.push({ role: 'system', content: options.systemPrompt });
     }
-    for (const m of messages) {
-      cohereMessages.push({ role: m.role, content: m.content });
-    }
+    cohereMessages.push(...toOpenAIMessages(messages));
 
     let fullContent = '';
     let inputTokens = 0;

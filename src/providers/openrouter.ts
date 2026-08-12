@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { getApiKey } from '../config/index.js';
 import { calculateCost, estimateTokens, getModelsByProvider } from '../config/models.js';
+import { toOpenAIMessages } from './openai-mapping.js';
 import type {
   Provider,
   Message,
@@ -63,9 +64,7 @@ export class OpenRouterProvider implements Provider {
     if (options.systemPrompt) {
       orMessages.push({ role: 'system', content: options.systemPrompt });
     }
-    for (const m of messages) {
-      orMessages.push({ role: m.role, content: m.content });
-    }
+    orMessages.push(...toOpenAIMessages(messages));
 
     const response = await client.chat.completions.create({
       model,
@@ -94,9 +93,7 @@ export class OpenRouterProvider implements Provider {
     if (options.systemPrompt) {
       orMessages.push({ role: 'system', content: options.systemPrompt });
     }
-    for (const m of messages) {
-      orMessages.push({ role: m.role, content: m.content });
-    }
+    orMessages.push(...toOpenAIMessages(messages));
 
     let fullContent = '';
     let inputTokens = 0;

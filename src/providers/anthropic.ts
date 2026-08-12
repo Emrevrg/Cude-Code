@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getApiKey } from '../config/index.js';
 import { calculateCost, getModelsByProvider } from '../config/models.js';
+import { toAnthropicMessages } from './anthropic-mapping.js';
 import type {
   Provider,
   Message,
@@ -63,9 +64,7 @@ export class AnthropicProvider implements Provider {
     const client = this.getClient();
 
     const systemMessage = options.systemPrompt ?? messages.find(m => m.role === 'system')?.content;
-    const chatMessages = messages
-      .filter(m => m.role !== 'system')
-      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+    const chatMessages = toAnthropicMessages(messages);
 
     const response = await client.messages.create({
       model,
@@ -96,9 +95,7 @@ export class AnthropicProvider implements Provider {
     const client = this.getClient();
 
     const systemMessage = options.systemPrompt ?? messages.find(m => m.role === 'system')?.content;
-    const chatMessages = messages
-      .filter(m => m.role !== 'system')
-      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+    const chatMessages = toAnthropicMessages(messages);
 
     let fullContent = '';
     let inputTokens = 0;
@@ -139,9 +136,7 @@ export class AnthropicProvider implements Provider {
     const client = this.getClient();
 
     const systemMessage = options.systemPrompt ?? messages.find(m => m.role === 'system')?.content;
-    const chatMessages = messages
-      .filter(m => m.role !== 'system')
-      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+    const chatMessages = toAnthropicMessages(messages);
 
     const anthropicTools = tools.map(t => ({
       name: t.name,

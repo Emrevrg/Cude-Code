@@ -1,5 +1,6 @@
 import { getApiKey } from '../config/index.js';
 import { estimateTokens, getModelsByProvider } from '../config/models.js';
+import { toOpenAIMessages } from './openai-mapping.js';
 import type {
   Provider,
   Message,
@@ -62,7 +63,7 @@ export class VLLMProvider implements Provider {
       model,
       messages: [
         ...(options.systemPrompt ? [{ role: 'system', content: options.systemPrompt }] : []),
-        ...messages,
+        ...toOpenAIMessages(messages),
       ],
       max_tokens: options.maxTokens ?? 4096,
       temperature: options.temperature,
@@ -99,7 +100,7 @@ export class VLLMProvider implements Provider {
       model,
       messages: [
         ...(options.systemPrompt ? [{ role: 'system', content: options.systemPrompt }] : []),
-        ...messages,
+        ...toOpenAIMessages(messages),
       ],
       max_tokens: options.maxTokens ?? 4096,
       temperature: options.temperature,
@@ -182,7 +183,7 @@ export class VLLMProvider implements Provider {
       model,
       messages: [
         ...(options.systemPrompt ? [{ role: 'system', content: options.systemPrompt }] : []),
-        ...messages,
+        ...toOpenAIMessages(messages),
       ],
       max_tokens: options.maxTokens ?? 4096,
       temperature: options.temperature,
