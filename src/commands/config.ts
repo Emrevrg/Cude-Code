@@ -264,6 +264,20 @@ export async function runConfigSet(setting: string, value: string): Promise<void
       break;
     }
 
+    case 'workspace-root': {
+      const { setWorkspaceRootSetting } = await import('../config/index.js');
+      const { resolve } = await import('path');
+      const { existsSync } = await import('fs');
+      const root = resolve(value);
+      if (!existsSync(root)) {
+        showError(`Directory does not exist: ${root}`);
+        process.exit(1);
+      }
+      setWorkspaceRootSetting(root);
+      showSuccess(`Workspace root set to: ${root}`);
+      break;
+    }
+
     default: {
       // `cude config set <provider>-endpoint <url>` — the wording Azure's own
       // error message tells people to use.
@@ -274,7 +288,7 @@ export async function runConfigSet(setting: string, value: string): Promise<void
       }
       showError(
         `Unknown setting: ${setting}\n` +
-        `Valid settings: default-provider, default-model, ` +
+        `Valid settings: default-provider, default-model, workspace-root, ` +
         ENDPOINT_PROVIDERS.map(p => p + ENDPOINT_SUFFIX).join(', ')
       );
       process.exit(1);

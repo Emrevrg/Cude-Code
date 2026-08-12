@@ -1,8 +1,9 @@
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, existsSync, unlinkSync, copyFileSync, renameSync } from 'fs';
-import { join, resolve, dirname } from 'path';
+import { join, resolve, dirname, relative, isAbsolute } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import chalk from 'chalk';
+import { getWorkspaceRootSetting } from '../config/index.js';
 import type { ToolDefinition } from '../providers/types.js';
 import { BROWSER_TOOL_DEFINITIONS, executeBrowserTool } from './browser.js';
 import { RAG_TOOL_DEFINITIONS, executeRagTool } from './rag.js';
@@ -300,20 +301,95 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...RAG_TOOL_DEFINITIONS,
 ];
 
-// Commands that require confirmation
+// ─── Workspace boundary ─────────────────────────────────────────────────────
+//
+// Every mutating file tool used to resolve() its argument and act, with no
+// restriction at all — `delete_file` would unlink anything the process could
+// reach. Mutations are now confined to a workspace root. Reads stay
+// unrestricted: the agent frequently needs to look at files outside the tree.
+
+let explicitWorkspaceRoot: string | null = null;
+
+/** Injection point for tests and embedders; overrides env and config. */
+export function setWorkspaceRoot(root: string): void {
+  explicitWorkspaceRoot = resolve(root);
+}
+
+export function resetWorkspaceRoot(): void {
+  explicitWorkspaceRoot = null;
+}
+
+export function getWorkspaceRoot(): string {
+  if (explicitWorkspaceRoot) return explicitWorkspaceRoot;
+  const fromEnv = process.env.CUDE_WORKSPACE_ROOT;
+  if (fromEnv && fromEnv.trim()) return resolve(fromEnv.trim());
+  const fromConfig = getWorkspaceRootSetting();
+  if (fromConfig) return resolve(fromConfig);
+  return process.cwd();
+}
+
+export function isInsideWorkspace(target: string): boolean {
+  const root = getWorkspaceRoot();
+  const rel = relative(root, resolve(target));
+  // A path on another drive comes back absolute, which isAbsolute catches.
+  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+}
+
+/** Returns a ToolResult to abort with, or null when the path is allowed. */
+function guardWritePath(filePath: string, label = 'path'): ToolResult | null {
+  const resolved = resolve(filePath);
+  if (isInsideWorkspace(resolved)) return null;
+  return {
+    success: false,
+    output: '',
+    error:
+      `Refusing to modify a ${label} outside the workspace root.\n` +
+      `  ${label}: ${resolved}\n` +
+      `  workspace root: ${getWorkspaceRoot()}\n` +
+      `Change the root with CUDE_WORKSPACE_ROOT or "cude config set workspace-root <dir>".`,
+  };
+}
+
+// ─── Destructive commands ───────────────────────────────────────────────────
+//
+// The old list was nine POSIX regexes applied only to run_command, so none of
+// `del /f /s /q`, `rd /s /q` or `Remove-Item -Recurse -Force` matched on
+// Windows — and `git_command` and `npm_command` bypassed the check entirely.
 const DESTRUCTIVE_PATTERNS = [
-  /rm\s+-rf/i,
-  /rm\s+--force/i,
+  // POSIX
+  /\brm\s+(-\w*[rf]\w*|--recursive|--force)/i,
   /sudo\s+rm/i,
-  /format\s+/i,
-  /mkfs\./i,
-  /dd\s+if=/i,
+  /\bmkfs\./i,
+  /\bdd\s+if=/i,
   />\s*\/dev\//i,
-  /shutdown/i,
-  /reboot/i,
+  /\bshutdown\b/i,
+  /\breboot\b/i,
+  // `format ` alone also matched `npm run format`, which now reaches this
+  // check; a drive letter is what makes it the destructive command.
+  /\bformat\s+[a-z]:/i,
+  // Windows cmd
+  /\bdel\s+\/[a-z]/i,
+  /\brd\s+\/s/i,
+  /\brmdir\s+\/s/i,
+  /\bdiskpart\b/i,
+  // PowerShell
+  /\bRemove-Item\b[\s\S]*(-Recurse|-Force)/i,
+  /\bInvoke-Expression\b/i,
+  /(^|[\s;|])iex(\s|$)/i,
+  // Piping a download straight into a shell
+  /\|\s*(sudo\s+)?(ba|z|k)?sh\b/i,
+  /\|\s*(powershell|pwsh)\b/i,
+  // git and npm reach this check now, and some of their subcommands destroy
+  // work that is not recoverable from the repository.
+  /\bgit\s+clean\b[^;|]*\s-[a-z]*f/i,
+  /\bgit\s+reset\s+--hard/i,
+  /\bgit\s+push\b[^;|]*\s(--force(?!-with-lease)|-f)\b/i,
+  /\bgit\s+branch\s+-D\b/,
+  /\bgit\s+checkout\s+--\s/i,
+  /\bnpm\s+(publish|unpublish)\b/i,
 ];
 
-function isDestructiveCommand(command: string): boolean {
+export function isDestructiveCommand(command: string): boolean {
   return DESTRUCTIVE_PATTERNS.some(p => p.test(command));
 }
 
@@ -323,6 +399,29 @@ let confirmCallback: ConfirmCallback | null = null;
 
 export function setConfirmCallback(fn: ConfirmCallback): void {
   confirmCallback = fn;
+}
+
+export function clearConfirmCallback(): void {
+  confirmCallback = null;
+}
+
+/**
+ * Returns a ToolResult to abort with when the operation must not proceed, or
+ * null once the user has agreed to it.
+ */
+async function requireConfirmation(message: string): Promise<ToolResult | null> {
+  if (!confirmCallback) {
+    return {
+      success: false,
+      output: '',
+      error: 'Destructive operation blocked (no confirmation callback registered)',
+    };
+  }
+  const confirmed = await confirmCallback(message);
+  if (!confirmed) {
+    return { success: false, output: '', error: 'Operation cancelled by user' };
+  }
+  return null;
 }
 
 /**
@@ -446,6 +545,8 @@ function executeReadFile(filePath: string, startLine?: number, endLine?: number)
 }
 
 function executeWriteFile(filePath: string, content: string): ToolResult {
+  const outside = guardWritePath(filePath, 'file');
+  if (outside) return outside;
   try {
     const resolved = resolve(filePath);
     const dir = dirname(resolved);
@@ -460,6 +561,8 @@ function executeWriteFile(filePath: string, content: string): ToolResult {
 }
 
 function executeReplaceInFile(filePath: string, oldText: string, newText: string, replaceAll?: boolean): ToolResult {
+  const outside = guardWritePath(filePath, 'file');
+  if (outside) return outside;
   try {
     const resolved = resolve(filePath);
     if (!existsSync(resolved)) {
@@ -488,6 +591,10 @@ function executeReplaceInFile(filePath: string, oldText: string, newText: string
 }
 
 function executeMoveFile(source: string, destination: string): ToolResult {
+  const outsideSource = guardWritePath(source, 'source');
+  if (outsideSource) return outsideSource;
+  const outsideDest = guardWritePath(destination, 'destination');
+  if (outsideDest) return outsideDest;
   try {
     const sourcePath = resolve(source);
     const destPath = resolve(destination);
@@ -543,6 +650,8 @@ function executeDiffFiles(fileA: string, fileB: string): ToolResult {
 }
 
 function executeApplyPatch(filePath: string, patch: string): ToolResult {
+  const outside = guardWritePath(filePath, 'file');
+  if (outside) return outside;
   try {
     const resolved = resolve(filePath);
     if (!existsSync(resolved)) {
@@ -591,13 +700,22 @@ function executeApplyPatch(filePath: string, patch: string): ToolResult {
   }
 }
 
-function executeDeleteFile(filePath: string): ToolResult {
+async function executeDeleteFile(filePath: string): Promise<ToolResult> {
+  const outside = guardWritePath(filePath, 'file');
+  if (outside) return outside;
   try {
     const resolved = resolve(filePath);
     if (!existsSync(resolved)) {
       return { success: false, output: '', error: `File not found: ${filePath}` };
     }
-    
+
+    // Deleting is as irreversible as any destructive shell command, so it goes
+    // through the same confirmation gate.
+    const denied = await requireConfirmation(
+      `WARNING: about to delete a file!\n  ${resolved}\n  Do you want to proceed?`
+    );
+    if (denied) return denied;
+
     unlinkSync(resolved);
     return { success: true, output: `Successfully deleted ${filePath}` };
   } catch (err) {
@@ -606,6 +724,8 @@ function executeDeleteFile(filePath: string): ToolResult {
 }
 
 function executeCopyFile(source: string, destination: string): ToolResult {
+  const outside = guardWritePath(destination, 'destination');
+  if (outside) return outside;
   try {
     const sourcePath = resolve(source);
     const destPath = resolve(destination);
@@ -626,19 +746,17 @@ function executeCopyFile(source: string, destination: string): ToolResult {
   }
 }
 
+/** Confirmation gate shared by run_command, git_command and npm_command. */
+async function guardDestructiveCommand(command: string): Promise<ToolResult | null> {
+  if (!isDestructiveCommand(command)) return null;
+  return requireConfirmation(
+    `WARNING: Destructive command detected!\n  ${command}\n  Do you want to proceed?`
+  );
+}
+
 async function executeRunCommand(command: string, cwd?: string, timeout?: number): Promise<ToolResult> {
-  if (isDestructiveCommand(command)) {
-    if (confirmCallback) {
-      const confirmed = await confirmCallback(
-        `WARNING: Destructive command detected!\n  ${command}\n  Do you want to proceed?`
-      );
-      if (!confirmed) {
-        return { success: false, output: '', error: 'Command cancelled by user' };
-      }
-    } else {
-      return { success: false, output: '', error: 'Destructive command blocked (no confirmation callback registered)' };
-    }
-  }
+  const blocked = await guardDestructiveCommand(command);
+  if (blocked) return blocked;
 
   try {
     const { stdout, stderr } = await execAsync(command, {
@@ -706,6 +824,8 @@ function executeListDirectory(dirPath: string, recursive?: boolean): ToolResult 
 }
 
 function executeCreateDirectory(dirPath: string): ToolResult {
+  const outside = guardWritePath(dirPath, 'directory');
+  if (outside) return outside;
   try {
     const resolved = resolve(dirPath);
     if (existsSync(resolved)) {
@@ -868,6 +988,8 @@ async function executeGrepSearch(pattern: string, directory: string, filePattern
 }
 
 async function executeGitCommand(command: string, cwd?: string): Promise<ToolResult> {
+  const blocked = await guardDestructiveCommand(`git ${command}`);
+  if (blocked) return blocked;
   try {
     const { stdout, stderr } = await execAsync(`git ${command}`, {
       cwd: cwd ? resolve(cwd) : process.cwd(),
@@ -887,6 +1009,9 @@ async function executeGitCommand(command: string, cwd?: string): Promise<ToolRes
 }
 
 async function executeNpmCommand(command: string, cwd?: string): Promise<ToolResult> {
+  // npm can run arbitrary package scripts, so it gets the same scrutiny.
+  const blocked = await guardDestructiveCommand(`npm ${command}`);
+  if (blocked) return blocked;
   try {
     const { stdout, stderr } = await execAsync(`npm ${command}`, {
       cwd: cwd ? resolve(cwd) : process.cwd(),

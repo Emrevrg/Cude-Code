@@ -126,7 +126,7 @@ export function createCLI(): Command {
 
   configCmd
     .command('set <setting> <value>')
-    .description('Set a configuration value (default-provider, default-model, <provider>-endpoint)')
+    .description('Set a configuration value (default-provider, default-model, workspace-root, <provider>-endpoint)')
     .action(async (setting: string, value: string) => {
       const { runConfigSet } = await import('./commands/config.js');
       await runConfigSet(setting, value);

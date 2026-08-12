@@ -13,6 +13,8 @@ export interface AppConfig {
   defaultProvider?: string;
   defaultModel?: string;
   ollamaBaseUrl?: string;
+  /** Root that mutating file tools are confined to. Defaults to process.cwd(). */
+  workspaceRoot?: string;
   budgetAlertThreshold?: number;
   theme?: 'default' | 'minimal';
   firstRun?: boolean;
@@ -155,6 +157,19 @@ export function getDefaultModel(): string | undefined {
 
 export function setDefaultModel(model: string): void {
   getConfig().set('defaultModel', model);
+}
+
+export function getWorkspaceRootSetting(): string | undefined {
+  try {
+    return getConfig().get('workspaceRoot') as string | undefined;
+  } catch {
+    // Never let an unreadable config block a tool call.
+    return undefined;
+  }
+}
+
+export function setWorkspaceRootSetting(root: string): void {
+  getConfig().set('workspaceRoot', root);
 }
 
 export function getOllamaBaseUrl(): string {
