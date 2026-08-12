@@ -9,13 +9,15 @@ import { mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const { executeTool, TOOL_DEFINITIONS } = await import('../dist/core/tools.js');
+const { executeTool, TOOL_DEFINITIONS, setWorkspaceRoot, setConfirmCallback } = await import('../dist/core/tools.js');
 
 let dir;
 let page;
 
 before(() => {
   dir = mkdtempSync(join(tmpdir(), 'cude-test-'));
+  setWorkspaceRoot(dir);
+  setConfirmCallback(async () => true);
   page = join(dir, 'page.html');
   writeFileSync(page, '<html><head><title>T</title></head><body><h1 id="h">Hi</h1></body></html>');
 });
@@ -141,6 +143,25 @@ describe('shell and git', () => {
 
   test('npm_command runs', async () => {
     await ok('npm_command', { command: '--version' });
+  });
+
+  test('F5: Windows and recursive deletion commands are classified as destructive', async () => {
+    setConfirmCallback(async () => false);
+    for (const command of ['del /f /s /q C:\\', 'rd /s /q C:\\', 'Remove-Item -Recurse -Force C:\\', 'rm -r /']) {
+      const result = await executeTool('run_command', { command });
+      assert.match(result.error ?? '', /cancelled|blocked/i, command);
+    }
+    setConfirmCallback(async () => true);
+  });
+
+  test('F5: mutating file tools reject paths outside the workspace root', async () => {
+    const outside = join(dir, '..', 'cude-outside.txt');
+    const write = await executeTool('write_file', { path: outside, content: 'blocked' });
+    const del = await executeTool('delete_file', { path: outside });
+    assert.equal(write.success, false);
+    assert.match(write.error, /outside workspace/i);
+    assert.equal(del.success, false);
+    assert.match(del.error, /outside workspace/i);
   });
 });
 

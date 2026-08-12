@@ -15,6 +15,44 @@ export interface ToolResult {
   error?: string;
 }
 
+// ─── Workspace boundary (F5) ───────────────────────────────────────────────
+// Mutating file tools operate inside a workspace root (default process.cwd(),
+// overridable via setWorkspaceRoot / CUDE_WORKSPACE_ROOT). Reads stay
+// unrestricted; writes/deletes/moves/patches/creates resolve the target and
+// reject anything that escapes the root, so a tool call cannot touch files
+// outside the project (e.g. ~/ssh or system paths) without escaping upward.
+let workspaceRoot: string = process.env.CUDE_WORKSPACE_ROOT ?? process.cwd();
+
+export function setWorkspaceRoot(dir: string): void {
+  workspaceRoot = resolve(dir);
+}
+
+export function getWorkspaceRoot(): string {
+  return workspaceRoot;
+}
+
+// Resolves `filePath` against the cwd and asserts it lives inside the
+// workspace root. Returns the resolved path (string) on success. Path
+// traversal (..) that escapes the root is rejected.
+function resolveWithinWorkspace(filePath: string): string {
+  const resolved = resolve(filePath);
+  const root = resolve(workspaceRoot);
+  if (resolved === root || resolved.startsWith(root + '/') || resolved.startsWith(root + '\\')) {
+    return resolved;
+  }
+  throw new DenyOutsideWorkspace(filePath, resolved, root);
+}
+
+class DenyOutsideWorkspace extends Error {
+  constructor(public readonly requested: string, public readonly resolved: string, public readonly root: string) {
+    super(
+      `Operation outside workspace root blocked: "${requested}" resolves to "${resolved}", ` +
+      `which is outside the workspace root "${root}". Writes and deletions are confined to the workspace.`
+    );
+    this.name = 'DenyOutsideWorkspace';
+  }
+}
+
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'read_file',
@@ -304,6 +342,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
 const DESTRUCTIVE_PATTERNS = [
   /rm\s+-rf/i,
   /rm\s+--force/i,
+  /rm\s+-r\b/i, // rm -r (without -f) slipped through the rm -rf regex (F5)
   /sudo\s+rm/i,
   /format\s+/i,
   /mkfs\./i,
@@ -311,6 +350,16 @@ const DESTRUCTIVE_PATTERNS = [
   />\s*\/dev\//i,
   /shutdown/i,
   /reboot/i,
+  // Windows destructive commands (F5): none of these matched the POSIX set.
+  /\bdel\s+\/[fs]/i,       // del /f, del /s
+  /\brd\s+\/s/i,          // rd /s /q
+  /\brmdir\s+\/s/i,       // rmdir /s /q
+  /Remove-Item[\s\S]*-Recurse/i, // Remove-Item -Recurse -Force
+  /\bdiskpart\b/i,        // partition/volume manipulation
+  // Shell-injection / install-from-pipe vectors (F5).
+  /\bInvoke-Expression\b/i,
+  /\biex\b/i,
+  /\|\s*(sh|bash|pwsh|powershell)\b/i, // curl ... | sh
 ];
 
 function isDestructiveCommand(command: string): boolean {
@@ -447,7 +496,7 @@ function executeReadFile(filePath: string, startLine?: number, endLine?: number)
 
 function executeWriteFile(filePath: string, content: string): ToolResult {
   try {
-    const resolved = resolve(filePath);
+    const resolved = resolveWithinWorkspace(filePath);
     const dir = dirname(resolved);
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
@@ -455,19 +504,22 @@ function executeWriteFile(filePath: string, content: string): ToolResult {
     writeFileSync(resolved, content, 'utf-8');
     return { success: true, output: `Successfully wrote ${content.length} characters to ${filePath}` };
   } catch (err) {
+    if (err instanceof DenyOutsideWorkspace) {
+      return { success: false, output: '', error: err.message };
+    }
     return { success: false, output: '', error: `Failed to write file: ${err instanceof Error ? err.message : String(err)}` };
   }
 }
 
 function executeReplaceInFile(filePath: string, oldText: string, newText: string, replaceAll?: boolean): ToolResult {
   try {
-    const resolved = resolve(filePath);
+    const resolved = resolveWithinWorkspace(filePath);
     if (!existsSync(resolved)) {
       return { success: false, output: '', error: `File not found: ${filePath}` };
     }
-    
+
     let content = readFileSync(resolved, 'utf-8');
-    
+
     if (!content.includes(oldText)) {
       return { success: false, output: '', error: `Text not found in file: ${oldText.substring(0, 50)}...` };
     }
@@ -479,18 +531,21 @@ function executeReplaceInFile(filePath: string, oldText: string, newText: string
       content = content.replace(oldText, newText);
     }
     writeFileSync(resolved, content, 'utf-8');
-    
+
     const replaced = replaceAll ? occurrences : Math.min(1, occurrences);
     return { success: true, output: `Replaced ${replaced} occurrence(s) in ${filePath}` };
   } catch (err) {
+    if (err instanceof DenyOutsideWorkspace) {
+      return { success: false, output: '', error: err.message };
+    }
     return { success: false, output: '', error: `Failed to replace in file: ${err instanceof Error ? err.message : String(err)}` };
   }
 }
 
 function executeMoveFile(source: string, destination: string): ToolResult {
   try {
-    const sourcePath = resolve(source);
-    const destPath = resolve(destination);
+    const sourcePath = resolveWithinWorkspace(source);
+    const destPath = resolveWithinWorkspace(destination);
 
     if (!existsSync(sourcePath)) {
       return { success: false, output: '', error: `Source not found: ${source}` };
@@ -504,6 +559,9 @@ function executeMoveFile(source: string, destination: string): ToolResult {
     renameSync(sourcePath, destPath);
     return { success: true, output: `Moved ${source} → ${destination}` };
   } catch (err) {
+    if (err instanceof DenyOutsideWorkspace) {
+      return { success: false, output: '', error: err.message };
+    }
     return { success: false, output: '', error: `Failed to move file: ${err instanceof Error ? err.message : String(err)}` };
   }
 }
@@ -544,7 +602,7 @@ function executeDiffFiles(fileA: string, fileB: string): ToolResult {
 
 function executeApplyPatch(filePath: string, patch: string): ToolResult {
   try {
-    const resolved = resolve(filePath);
+    const resolved = resolveWithinWorkspace(filePath);
     if (!existsSync(resolved)) {
       return { success: false, output: '', error: `File not found: ${filePath}` };
     }
@@ -587,28 +645,38 @@ function executeApplyPatch(filePath: string, patch: string): ToolResult {
     writeFileSync(resolved, lines.join('\n'), 'utf-8');
     return { success: true, output: `Applied patch (${applied} line change(s)) to ${filePath}` };
   } catch (err) {
+    if (err instanceof DenyOutsideWorkspace) {
+      return { success: false, output: '', error: err.message };
+    }
     return { success: false, output: '', error: `Failed to apply patch: ${err instanceof Error ? err.message : String(err)}` };
   }
 }
 
-function executeDeleteFile(filePath: string): ToolResult {
+async function executeDeleteFile(filePath: string): Promise<ToolResult> {
   try {
-    const resolved = resolve(filePath);
+    const resolved = resolveWithinWorkspace(filePath);
     if (!existsSync(resolved)) {
       return { success: false, output: '', error: `File not found: ${filePath}` };
     }
-    
+
+    if (!confirmCallback || !await confirmCallback(`WARNING: File deletion requested:\n  ${filePath}\n  Do you want to proceed?`)) {
+      return { success: false, output: '', error: confirmCallback ? 'Deletion cancelled by user' : 'File deletion blocked (no confirmation callback registered)' };
+    }
+
     unlinkSync(resolved);
     return { success: true, output: `Successfully deleted ${filePath}` };
   } catch (err) {
+    if (err instanceof DenyOutsideWorkspace) {
+      return { success: false, output: '', error: err.message };
+    }
     return { success: false, output: '', error: `Failed to delete file: ${err instanceof Error ? err.message : String(err)}` };
   }
 }
 
 function executeCopyFile(source: string, destination: string): ToolResult {
   try {
-    const sourcePath = resolve(source);
-    const destPath = resolve(destination);
+    const sourcePath = resolveWithinWorkspace(source);
+    const destPath = resolveWithinWorkspace(destination);
     
     if (!existsSync(sourcePath)) {
       return { success: false, output: '', error: `Source file not found: ${source}` };
@@ -622,6 +690,9 @@ function executeCopyFile(source: string, destination: string): ToolResult {
     copyFileSync(sourcePath, destPath);
     return { success: true, output: `Successfully copied ${source} to ${destination}` };
   } catch (err) {
+    if (err instanceof DenyOutsideWorkspace) {
+      return { success: false, output: '', error: err.message };
+    }
     return { success: false, output: '', error: `Failed to copy file: ${err instanceof Error ? err.message : String(err)}` };
   }
 }
@@ -658,6 +729,17 @@ async function executeRunCommand(command: string, cwd?: string, timeout?: number
     }
     return { success: false, output: '', error: err instanceof Error ? err.message : String(err) };
   }
+}
+
+async function confirmDestructiveCommand(kind: string, command: string): Promise<ToolResult | null> {
+  if (!isDestructiveCommand(command)) return null;
+  if (!confirmCallback) {
+    return { success: false, output: '', error: 'Destructive command blocked (no confirmation callback registered)' };
+  }
+  if (!await confirmCallback(`WARNING: Destructive ${kind} detected!\n  ${command}\n  Do you want to proceed?`)) {
+    return { success: false, output: '', error: 'Command cancelled by user' };
+  }
+  return null;
 }
 
 function executeListDirectory(dirPath: string, recursive?: boolean): ToolResult {
@@ -707,7 +789,7 @@ function executeListDirectory(dirPath: string, recursive?: boolean): ToolResult 
 
 function executeCreateDirectory(dirPath: string): ToolResult {
   try {
-    const resolved = resolve(dirPath);
+    const resolved = resolveWithinWorkspace(dirPath);
     if (existsSync(resolved)) {
       return { success: true, output: `Directory already exists: ${dirPath}` };
     }
@@ -715,6 +797,9 @@ function executeCreateDirectory(dirPath: string): ToolResult {
     mkdirSync(resolved, { recursive: true });
     return { success: true, output: `Successfully created directory: ${dirPath}` };
   } catch (err) {
+    if (err instanceof DenyOutsideWorkspace) {
+      return { success: false, output: '', error: err.message };
+    }
     return { success: false, output: '', error: `Failed to create directory: ${err instanceof Error ? err.message : String(err)}` };
   }
 }
@@ -868,6 +953,8 @@ async function executeGrepSearch(pattern: string, directory: string, filePattern
 }
 
 async function executeGitCommand(command: string, cwd?: string): Promise<ToolResult> {
+  const confirmation = await confirmDestructiveCommand('git command', command);
+  if (confirmation) return confirmation;
   try {
     const { stdout, stderr } = await execAsync(`git ${command}`, {
       cwd: cwd ? resolve(cwd) : process.cwd(),
@@ -887,6 +974,8 @@ async function executeGitCommand(command: string, cwd?: string): Promise<ToolRes
 }
 
 async function executeNpmCommand(command: string, cwd?: string): Promise<ToolResult> {
+  const confirmation = await confirmDestructiveCommand('npm command', command);
+  if (confirmation) return confirmation;
   try {
     const { stdout, stderr } = await execAsync(`npm ${command}`, {
       cwd: cwd ? resolve(cwd) : process.cwd(),
