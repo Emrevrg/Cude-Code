@@ -190,18 +190,6 @@ export function createCLI(): Command {
       await runBudgetAlert(amount);
     });
 
-  budgetCmd
-    .command('unset')
-    .description('Remove one or more budget limits')
-    .option('--total', 'Clear the total limit')
-    .option('--monthly', 'Clear the monthly limit')
-    .option('--alert', 'Clear the alert threshold')
-    .option('--all', 'Clear all limits')
-    .action(async (options: { total?: boolean; monthly?: boolean; alert?: boolean; all?: boolean }) => {
-      const { runBudgetUnset } = await import('./commands/budget.js');
-      await runBudgetUnset(options);
-    });
-
   // ─── SESSIONS COMMAND ─────────────────────────────────────────────────────
   const sessionsCmd = program
     .command('sessions')
@@ -276,6 +264,22 @@ export function createCLI(): Command {
       showBanner();
       const { runConfigWizard } = await import('./commands/config.js');
       await runConfigWizard();
+    });
+
+  program
+    .command('context')
+    .description('Show project instruction files loaded by the agent')
+    .action(async () => {
+      const { loadProjectContext } = await import('./core/context.js');
+      const files = loadProjectContext();
+      if (files.length === 0) {
+        console.log('No AGENTS.md, CLAUDE.md, or .cude-context.md found.');
+        return;
+      }
+      console.log('Project context files:');
+      for (const file of files) {
+        console.log(`- ${file.path}${file.truncated ? ' (truncated)' : ''}`);
+      }
     });
 
   return program;

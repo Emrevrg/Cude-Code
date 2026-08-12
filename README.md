@@ -18,6 +18,12 @@ status.
 cude run "inspect the project, fix the failing tests, and summarize the changes"
 ```
 
+Before an autonomous run, Cude Code automatically loads project instructions
+from `AGENTS.md`, `CLAUDE.md`, or `.cude-context.md` in the current directory
+and its parents. The closest `AGENTS.override.md` replaces the matching file.
+Use `cude context` to audit the active files. Context is capped and truncated
+safely so a large instruction file cannot consume the whole model window.
+
 Mutating file tools are confined to the workspace root, destructive commands
 require confirmation, and failed or budget-exhausted runs exit with status 1.
 See [docs/CUDE-CLAW.md](docs/CUDE-CLAW.md) for the workflow and extension guide.
@@ -47,6 +53,7 @@ cude chat
 - **Autonomous Agent**: Solve complex tasks with tool-use
 - **Cost Tracking**: Monitor spending, set budgets, get alerts
 - **Session Management**: Save and restore conversations
+- **Project Context**: Compatible `AGENTS.md`/`CLAUDE.md` instructions with a `cude context` audit command
 - **Privacy First**: Everything stays on your machine
 - **Pure CLI**: No Electron, lightweight and fast
 
@@ -172,6 +179,22 @@ cude sessions export <id> conversation.md
 # Delete session
 cude sessions delete <id>
 ```
+
+### Project Context
+```bash
+# Show the instruction files the agent will load
+cude context
+```
+
+## Upstream design influences
+
+Cude Code keeps its TypeScript, provider-agnostic core while adopting useful
+workflow ideas from [oh-my-pi](https://github.com/can1357/oh-my-pi) and
+[Pi coding-agent](https://github.com/earendil-works/pi/tree/main/packages/coding-agent):
+explicit project context, safe tool boundaries, resumable sessions, and an
+extensible terminal-first workflow. Their native Rust/monorepo internals are
+not copied into this repository, so Cude Code remains installable with Node.js
+and keeps its existing provider and tool compatibility.
 
 ## Supported Providers
 

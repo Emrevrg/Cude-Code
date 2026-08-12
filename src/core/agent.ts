@@ -6,6 +6,7 @@ import { checkBudgetAlert } from '../storage/budget.js';
 import type { Message } from '../providers/types.js';
 import { validateTurnSequence } from '../providers/wire.js';
 import { MODELS } from '../config/models.js';
+import { formatProjectContext, loadProjectContext } from './context.js';
 
 export interface AgentOptions {
   task: string;
@@ -133,6 +134,10 @@ Important guidelines:
 
 When you have completed the task, start your final response with "TASK COMPLETE:" followed by a summary.`;
 
+function getAgentSystemPrompt(): string {
+  return AGENT_SYSTEM_PROMPT + formatProjectContext(loadProjectContext());
+}
+
 export async function runAgent(options: AgentOptions): Promise<AgentResult> {
   const {
     taskType = 'code',
@@ -153,7 +158,6 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
     preferredProvider,
     preferredModel,
   });
-
   if (verbose) {
     console.log(chalk.dim(`  Using ${provider.displayName} / ${model} (${reason})`));
   }
@@ -218,7 +222,7 @@ async function runToolsAgent(
       messages,
       model,
       TOOL_DEFINITIONS,
-      { systemPrompt: AGENT_SYSTEM_PROMPT, maxTokens: 4096 }
+      { systemPrompt: getAgentSystemPrompt(), maxTokens: 4096 }
     );
 
     totalCost += response.cost;
@@ -314,7 +318,7 @@ async function runReActAgent(
     `- ${t.name}: ${t.description}`
   ).join('\n');
 
-  const systemPrompt = `${AGENT_SYSTEM_PROMPT}
+  const systemPrompt = `${getAgentSystemPrompt()}
 
 Available tools:
 ${toolDescriptions}
