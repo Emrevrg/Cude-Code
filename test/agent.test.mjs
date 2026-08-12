@@ -97,6 +97,39 @@ describe('F1: the agent must not report success when it failed', () => {
   });
 });
 
+describe('F3: truncated tool output says so', () => {
+  test('F3: oversized tool output carries an explicit truncation marker', async () => {
+    // package-lock.json is comfortably over the limit. The old code cut at 500
+    // chars and said nothing, so the model could not tell a short result from a
+    // clipped one.
+    const { server } = await runAgainstStub([
+      { content: 'reading a big file', toolCalls: [{ name: 'read_file', arguments: { path: 'package-lock.json' } }] },
+      { content: 'TASK COMPLETE: done' },
+    ]);
+
+    const toolMessage = server.sentMessages()[1].find(m => m.role === 'tool');
+    assert.match(
+      toolMessage.content,
+      /\.\.\. \[truncated, showed \d+ of \d+ chars\]/,
+      'a clipped result must announce that it was clipped'
+    );
+    assert.ok(
+      toolMessage.content.length > 4000,
+      `the limit must be workable, got ${toolMessage.content.length} chars`
+    );
+  });
+
+  test('F3: output within the limit is passed through untouched', async () => {
+    const { server } = await runAgainstStub([
+      { content: 'reading', toolCalls: [readPkg] },
+      { content: 'TASK COMPLETE: done' },
+    ]);
+
+    const toolMessage = server.sentMessages()[1].find(m => m.role === 'tool');
+    assert.doesNotMatch(toolMessage.content, /truncated/);
+  });
+});
+
 describe('F2: tool results travel inside the tool-call protocol', () => {
   test('F2: the assistant message carries tool_calls and each result is a tool message with the matching tool_call_id', async () => {
     // Previously the loop appended "Tool Results: ..." into the assistant's own

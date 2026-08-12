@@ -40,6 +40,24 @@ export interface AgentResult {
   steps: AgentStep[];
 }
 
+/**
+ * How much of a tool's output reaches the model. The old limits — 500 chars in
+ * the tools loop, 1000 in the ReAct loop — cut a `npm test` result off mid-word
+ * with nothing to say anything had been dropped, so the model reasoned from a
+ * fragment it believed was complete.
+ */
+export const TOOL_RESULT_MAX_CHARS = 8000;
+/** The ReAct loop re-sends the whole transcript each turn, so it keeps less. */
+export const REACT_TOOL_RESULT_MAX_CHARS = 4000;
+
+export function truncateToolOutput(output: string, limit: number): string {
+  if (output.length <= limit) return output;
+  return (
+    output.substring(0, limit) +
+    `\n... [truncated, showed ${limit} of ${output.length} chars]`
+  );
+}
+
 export const STOP_REASON_MESSAGES: Record<AgentStopReason, string> = {
   completed: 'The model finished the task.',
   max_iterations: 'Hit the iteration limit before the model finished. Raise --max-iterations or narrow the task.',
@@ -236,7 +254,7 @@ async function runToolsAgent(
         tool_call_id: toolCall.id,
         name: toolCall.name,
         content: result.success
-          ? result.output.substring(0, 500)
+          ? truncateToolOutput(result.output, TOOL_RESULT_MAX_CHARS)
           : `ERROR: ${result.error}`,
       });
     }
@@ -354,7 +372,7 @@ When done, start with "TASK COMPLETE:" to finish.`;
       }
 
       const resultText = result.success
-        ? result.output.substring(0, 1000)
+        ? truncateToolOutput(result.output, REACT_TOOL_RESULT_MAX_CHARS)
         : `Error: ${result.error}`;
 
       steps.push({ type: 'tool_result', content: resultText });
