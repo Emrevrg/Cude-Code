@@ -26,7 +26,10 @@ export class LiteLLMProvider implements Provider {
 
   private getConfig() {
     const endpoint = getApiKey('litellm-endpoint') || 'http://localhost:8000';
-    const apiKey = getApiKey('litellm-key');
+    // `cude config set-key litellm <key>` stores it under "litellm"; this read
+    // "litellm-key", a name the CLI rejects, so setting a LiteLLM key silently
+    // did nothing. The old name stays as a fallback for hand-edited configs.
+    const apiKey = getApiKey('litellm') || getApiKey('litellm-key');
     return { endpoint, apiKey };
   }
 
