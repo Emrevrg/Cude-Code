@@ -39,38 +39,69 @@ const KEY_NAMES: Record<string, string> = {
   gguf:        'Local GGUF (llama.cpp)',
 };
 
+// `<provider>-endpoint` keys configure the base URL for self-hosted /
+// deployment providers (vllm-endpoint, litellm-endpoint, gguf-endpoint,
+// azure-endpoint). They are stored through the same key-store as API keys
+// (getApiKey('vllm-endpoint') etc.), so they must validate against the provider
+// list rather than being rejected as "Unknown provider". See F4.
+const VALID_PROVIDERS = PROVIDERS;
+const ENDPOINT_SUFFIX = '-endpoint';
+
+function resolveKeyNameInfo(provider: string): { valid: boolean; isEndpoint: boolean; baseProvider: string } {
+  if (VALID_PROVIDERS.includes(provider)) {
+    return { valid: true, isEndpoint: false, baseProvider: provider };
+  }
+  if (provider.endsWith(ENDPOINT_SUFFIX)) {
+    const base = provider.slice(0, -ENDPOINT_SUFFIX.length);
+    if (VALID_PROVIDERS.includes(base)) {
+      return { valid: true, isEndpoint: true, baseProvider: base };
+    }
+  }
+  return { valid: false, isEndpoint: false, baseProvider: provider };
+}
+
 export async function runConfigSetKey(provider: string, key?: string): Promise<void> {
-  if (!PROVIDERS.includes(provider)) {
+  const info = resolveKeyNameInfo(provider);
+  if (!info.valid) {
     showError(`Unknown provider: ${provider}\nValid providers: ${PROVIDERS.join(', ')}`);
     process.exit(1);
   }
 
   let apiKey = key;
   if (!apiKey) {
+    const labelPart = info.isEndpoint ? `${info.baseProvider} endpoint URL` : `${KEY_NAMES[info.baseProvider] ?? info.baseProvider} API key`;
     const answer = await inquirer.prompt([
       {
-        type: 'password',
+        type: 'input',
         name: 'key',
-        message: `Enter ${KEY_NAMES[provider] ?? provider} API key:`,
-        validate: (input: string) => input.trim().length > 0 || 'API key cannot be empty',
+        message: `Enter ${labelPart}:`,
+        validate: (input: string) => input.trim().length > 0 || 'Value cannot be empty',
       },
     ]);
     apiKey = (answer as { key: string }).key;
   }
 
   setApiKey(provider, apiKey!.trim());
-  showSuccess(`API key for ${KEY_NAMES[provider] ?? provider} saved successfully`);
+  if (info.isEndpoint) {
+    showSuccess(`Endpoint for ${KEY_NAMES[info.baseProvider] ?? info.baseProvider} saved successfully`);
+  } else {
+    showSuccess(`API key for ${KEY_NAMES[info.baseProvider] ?? info.baseProvider} saved successfully`);
+  }
 }
 
 export async function runConfigRemoveKey(provider: string): Promise<void> {
-  if (!PROVIDERS.includes(provider)) {
+  const info = resolveKeyNameInfo(provider);
+  if (!info.valid) {
     showError(`Unknown provider: ${provider}`);
     process.exit(1);
   }
 
+  const label = info.isEndpoint
+    ? `${KEY_NAMES[info.baseProvider] ?? info.baseProvider} endpoint`
+    : `${KEY_NAMES[info.baseProvider] ?? info.baseProvider} API key`;
   const existing = getApiKey(provider);
   if (!existing) {
-    showInfo(`No API key configured for ${KEY_NAMES[provider] ?? provider}`);
+    showInfo(`No ${label} configured`);
     return;
   }
 
@@ -78,14 +109,14 @@ export async function runConfigRemoveKey(provider: string): Promise<void> {
     {
       type: 'confirm',
       name: 'confirm',
-      message: `Remove API key for ${KEY_NAMES[provider] ?? provider}?`,
+      message: `Remove ${label}?`,
       default: false,
     },
   ]);
 
   if ((answer as { confirm: boolean }).confirm) {
     removeApiKey(provider);
-    showSuccess(`API key for ${KEY_NAMES[provider] ?? provider} removed`);
+    showSuccess(`${label} removed`);
   } else {
     showInfo('Cancelled');
   }
@@ -105,6 +136,27 @@ export function runConfigListKeys(): void {
     } else {
       console.log(`  ${chalk.dim(name)} ${chalk.dim('○')} ${chalk.dim('Not configured')}`);
     }
+  }
+
+  // Providers that read a `<provider>-endpoint` base URL alongside a key.
+  // These are stored in the same key store; surface them so users can see what
+  // they configured rather than only guessing via `cude providers list`.
+  const ENDPOINT_PROVIDERS = ['azure', 'vllm', 'litellm', 'gguf'];
+  console.log();
+  console.log(chalk.bold.cyan('  Endpoints:'));
+  console.log(chalk.dim('  ─────────────────────────────────────'));
+  let anyEndpoint = false;
+  for (const provider of ENDPOINT_PROVIDERS) {
+    const endpoint = getApiKey(`${provider}-endpoint`);
+    if (endpoint) {
+      anyEndpoint = true;
+      const name = (KEY_NAMES[provider] ?? provider).padEnd(20);
+      console.log(`  ${chalk.white(name)} ${chalk.green('✓')} ${chalk.cyan(endpoint)}`);
+    }
+  }
+  if (!anyEndpoint) {
+    console.log(chalk.dim('  No endpoint URLs configured.'));
+    console.log(chalk.dim('  Set with: cude config set-key <provider>-endpoint <url>'));
   }
 
   const defaultProvider = getDefaultProvider();
