@@ -39,15 +39,8 @@ Several tests are marked `regression:` and correspond to bugs that actually
 shipped. If one starts failing, that bug is back — fix the code rather than
 the test.
 
-`.github/workflows/ci.yml` runs these on Node 18, 20 and 22 for every push
-and pull request.
-
-> **GitHub Actions is not currently running for this repository** — jobs are
-> rejected before any step executes, which is an account-level setting rather
-> than anything in the workflow. Enable it under
-> *Settings → Actions → General → Allow all actions*, and check
-> *Settings → Billing → Spending limits* if jobs still fail instantly. Until
-> then, run the three commands above locally before opening a pull request.
+The repository CI workflow runs the build, tests, and lint checks on supported
+Node.js versions for pushes and pull requests.
 
 ## Project layout
 
