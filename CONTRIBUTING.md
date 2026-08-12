@@ -88,6 +88,19 @@ npm run build
 node tools/generate-cli-preview.mjs    # regenerate assets/cude-cli.png
 ```
 
+The generator renders the SVG in a real browser, so it needs Chromium. It
+looks for one in this order:
+
+1. `CUDE_CHROME_PATH`, if you set it — use this to point at a browser you
+   already have instead of downloading another;
+2. a browser under `PLAYWRIGHT_BROWSERS_PATH`, which some CI images and dev
+   containers pre-populate;
+3. Playwright's own, from `npx playwright install chromium`.
+
+If a path you named fails to launch, it says so and falls back rather than
+failing outright — so a typo in `CUDE_CHROME_PATH` shows up as a warning
+instead of looking like it worked.
+
 ## Commit messages
 
 Describe what changed and why. Keep the subject under ~72 characters.

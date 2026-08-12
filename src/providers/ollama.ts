@@ -7,6 +7,7 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
 
 import { fetchProvider } from './net.js';
@@ -32,6 +33,7 @@ interface OllamaGenerateResponse {
 export class OllamaProvider implements Provider {
   name = 'ollama';
   displayName = 'Ollama (Local)';
+  costClass: CostClass = 'local';
 
   private getBaseUrl(): string {
     return getOllamaBaseUrl();

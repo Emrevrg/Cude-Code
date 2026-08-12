@@ -1,7 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getApiKey } from '../config/index.js';
 import { calculateCost, getModelsByProvider } from '../config/models.js';
-import { toAnthropicMessages } from './anthropic-mapping.js';
 import type {
   Provider,
   Message,
@@ -11,11 +10,14 @@ import type {
   ModelInfo,
   ToolDefinition,
   ToolCall,
+  CostClass,
 } from './types.js';
+import { toAnthropicWireMessages } from './wire.js';
 
 export class AnthropicProvider implements Provider {
   name = 'anthropic';
   displayName = 'Anthropic Claude';
+  costClass: CostClass = 'paid';
 
   private getClient(): Anthropic {
     const apiKey = getApiKey('anthropic');
@@ -64,7 +66,8 @@ export class AnthropicProvider implements Provider {
     const client = this.getClient();
 
     const systemMessage = options.systemPrompt ?? messages.find(m => m.role === 'system')?.content;
-    const chatMessages = toAnthropicMessages(messages);
+    // tool_use / tool_result blocks, not plain text — see providers/wire.ts.
+    const chatMessages = toAnthropicWireMessages(messages) as Anthropic.MessageParam[];
 
     const response = await client.messages.create({
       model,
@@ -95,7 +98,8 @@ export class AnthropicProvider implements Provider {
     const client = this.getClient();
 
     const systemMessage = options.systemPrompt ?? messages.find(m => m.role === 'system')?.content;
-    const chatMessages = toAnthropicMessages(messages);
+    // tool_use / tool_result blocks, not plain text — see providers/wire.ts.
+    const chatMessages = toAnthropicWireMessages(messages) as Anthropic.MessageParam[];
 
     let fullContent = '';
     let inputTokens = 0;
@@ -136,7 +140,8 @@ export class AnthropicProvider implements Provider {
     const client = this.getClient();
 
     const systemMessage = options.systemPrompt ?? messages.find(m => m.role === 'system')?.content;
-    const chatMessages = toAnthropicMessages(messages);
+    // tool_use / tool_result blocks, not plain text — see providers/wire.ts.
+    const chatMessages = toAnthropicWireMessages(messages) as Anthropic.MessageParam[];
 
     const anthropicTools = tools.map(t => ({
       name: t.name,

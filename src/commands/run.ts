@@ -1,6 +1,6 @@
 import readline from 'readline';
 import chalk from 'chalk';
-import { runAgent } from '../core/agent.js';
+import { runAgent, STOP_REASON_MESSAGES } from '../core/agent.js';
 import { selectProviderAndModel, type TaskType } from '../core/selector.js';
 import { startSpinner, stopSpinner, updateSpinner } from '../ui/spinner.js';
 import { showError, showSuccess, showCostInfo, renderMarkdown } from '../ui/display.js';
@@ -113,14 +113,6 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
 
     console.log();
 
-    if (!result.success) {
-      console.log(chalk.red(`  Task failed: ${result.stopReason}`));
-      if (result.output) {
-        console.log(chalk.dim(`  ${result.output}`));
-      }
-      console.log();
-    }
-
     if (verbose && result.steps.length > 0) {
       console.log(chalk.bold('  Execution Steps:'));
       for (const step of result.steps) {
@@ -152,6 +144,12 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
     if (result.success) {
       showSuccess(`Task completed in ${result.iterations} iteration${result.iterations !== 1 ? 's' : ''}`);
     } else {
+      // An unfinished run has to be distinguishable from a finished one, both
+      // on screen and in `$?` — CI cannot see the difference otherwise.
+      showError(
+        `Task failed (${result.stopReason}) after ${result.iterations} iteration${result.iterations !== 1 ? 's' : ''}\n` +
+        STOP_REASON_MESSAGES[result.stopReason]
+      );
       process.exitCode = 1;
     }
 

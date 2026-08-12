@@ -7,11 +7,13 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
 
 export class AzureOpenAIProvider implements Provider {
   name = 'azure';
   displayName = 'Azure OpenAI';
+  costClass: CostClass = 'paid';
 
   private getClient() {
     const endpoint = getApiKey('azure-endpoint');

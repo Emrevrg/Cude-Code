@@ -2,15 +2,67 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## [Unreleased]
 
-- Fixed truthful agent completion and non-zero failure exits.
-- Restored native tool-call protocol and explicit output truncation markers.
-- Added workspace boundaries, Windows destructive-command detection, and
-  confirmation for file, git, and npm mutations.
-- Added self-hosted endpoint configuration, local budget exemptions,
-  `cude budget unset`, zero-limit protection, metadata-based provider labels,
-  stdout spinners, and the Cude Claw guide.
+Ten defects found by an end-to-end audit that installed the tool and ran the
+agent against a local OpenAI-compatible endpoint. F1, F2 and F5 change
+behaviour.
+
+### Bug Fixes
+
+- **[F1] The agent reported success even when it failed.** `runToolsAgent` and
+  `runReActAgent` returned `success: true` unconditionally, so a run that
+  exhausted `--max-iterations` or tripped the budget gate printed
+  `✔ Task completed!` and exited 0. `AgentResult` now carries
+  `stopReason: 'completed' | 'max_iterations' | 'budget_exceeded' |
+  'empty_output'`, `success` is true only when the model itself finished and
+  left non-empty output, and `cude run` prints the reason and exits 1 on
+  failure. **Behaviour change:** failing runs now have a non-zero exit code.
+- **[F2] Tool results were sent outside the tool-call protocol.** Tool output
+  was appended as plain text into the assistant's own message, hiding from the
+  model the arguments it had called each tool with, and producing consecutive
+  assistant messages that always ended on one — which Anthropic (the default
+  for `code` tasks) reads as prefill continuation. Assistant messages now carry
+  their `tool_calls` and each result comes back as a `role: 'tool'` message
+  keyed by `tool_call_id`; Anthropic gets `tool_use` / `tool_result` content
+  blocks. **Behaviour change:** the wire format of every agent request.
+- **[F3] Tool output was truncated silently** at 500 chars (1000 in the ReAct
+  loop). The limits are now named constants (8000 / 4000) and a clipped result
+  ends with `... [truncated, showed N of M chars]`.
+- **[F4] Four endpoint settings were unreachable.** `vllm-endpoint`,
+  `litellm-endpoint`, `gguf-endpoint` and `azure-endpoint` all failed with
+  "Unknown provider", which left Azure permanently unconfigurable. `config
+  set-key` accepts them, `cude config set-endpoint <provider> <url>` was added,
+  and `cude config list` shows configured endpoints.
+- **[F5] No filesystem boundary, and the destructive-command filter missed
+  Windows.** Mutating file tools are confined to a workspace root (default
+  `process.cwd()`, overridable via `CUDE_WORKSPACE_ROOT` or `cude config set
+  workspace-root`); `delete_file` requires confirmation; the pattern list
+  covers `del /f`, `rd /s`, `rmdir /s`, `Remove-Item -Recurse`, `diskpart`,
+  `rm -r`, `Invoke-Expression`/`iex` and pipe-to-shell; and `git_command` and
+  `npm_command` go through the filter. **Behaviour change:** writes outside the
+  workspace root are rejected and deletes prompt.
+- **[F6] The budget gate blocked free and local providers.** A $0 limit stopped
+  vLLM, Ollama and GGUF runs that cost nothing. The gate is now skipped when
+  the selected provider/model is free or local.
+- **[F7] A budget limit could not be removed** without editing
+  `~/.cude/budget.json`. Adds `cude budget unset [--total] [--monthly]
+  [--alert] [--all]`.
+- **[F8] Budget status printed `NaN%`** when a limit was 0.
+- **[F9] vLLM had no catalog entries and was mislabelled `Paid`.** The
+  Free/Local column reads each provider's declared cost class, and
+  `cude providers models <p>` lists what a self-hosted server actually serves.
+- **[F10] Every stderr line became a PowerShell error.** ora's spinner output
+  moves to stdout; stderr is reserved for genuine errors.
+
+### Testing
+
+- `test/helpers/openai-stub.mjs`: a scripted local OpenAI-compatible server
+  that makes the agent loop testable end-to-end with no API key.
+- New suites: `agent`, `wire`, `config`, `budget`, `providers`, `spinner`.
+  80 tests total, up from 24.
+- `CUDE_HOME` redirects persisted state so budget- and config-backed behaviour
+  can be tested without touching the real `~/.cude`.
 
 ## [0.1.0] - 2026-08-10
 

@@ -1,6 +1,5 @@
 import { getApiKey } from '../config/index.js';
 import { estimateTokens, getModelsByProvider } from '../config/models.js';
-import { toOpenAIMessages } from './openai-mapping.js';
 import type {
   Provider,
   Message,
@@ -10,9 +9,11 @@ import type {
   ModelInfo,
   ToolDefinition,
   ToolCall,
+  CostClass,
 } from './types.js';
 
 import { fetchProvider } from './net.js';
+import { toOpenAIWireMessages } from './wire.js';
 
 // Reports an unreachable endpoint instead of a bare "fetch failed".
 const fetchVllm = (url: string, init?: RequestInit): Promise<Response> =>
@@ -21,6 +22,7 @@ const fetchVllm = (url: string, init?: RequestInit): Promise<Response> =>
 export class VLLMProvider implements Provider {
   name = 'vllm';
   displayName = 'vLLM (Self-hosted)';
+  costClass: CostClass = 'local';
 
   private getConfig() {
     const endpoint = getApiKey('vllm-endpoint') || 'http://localhost:8000';
@@ -52,6 +54,14 @@ export class VLLMProvider implements Provider {
     }));
   }
 
+  async listRemoteModels(): Promise<string[]> {
+    const { endpoint } = this.getConfig();
+    const response = await fetchVllm(`${endpoint}/v1/models`);
+    if (!response.ok) throw new Error(`vLLM error: ${response.statusText}`);
+    const data = await response.json() as { data?: Array<{ id: string }> };
+    return (data.data ?? []).map(m => m.id);
+  }
+
   supportsTools(): boolean {
     return true;
   }
@@ -61,10 +71,7 @@ export class VLLMProvider implements Provider {
 
     const body = {
       model,
-      messages: [
-        ...(options.systemPrompt ? [{ role: 'system', content: options.systemPrompt }] : []),
-        ...toOpenAIMessages(messages),
-      ],
+      messages: toOpenAIWireMessages(messages, options.systemPrompt),
       max_tokens: options.maxTokens ?? 4096,
       temperature: options.temperature,
     };
@@ -98,10 +105,7 @@ export class VLLMProvider implements Provider {
 
     const body = {
       model,
-      messages: [
-        ...(options.systemPrompt ? [{ role: 'system', content: options.systemPrompt }] : []),
-        ...toOpenAIMessages(messages),
-      ],
+      messages: toOpenAIWireMessages(messages, options.systemPrompt),
       max_tokens: options.maxTokens ?? 4096,
       temperature: options.temperature,
       stream: true,
@@ -181,10 +185,7 @@ export class VLLMProvider implements Provider {
 
     const body = {
       model,
-      messages: [
-        ...(options.systemPrompt ? [{ role: 'system', content: options.systemPrompt }] : []),
-        ...toOpenAIMessages(messages),
-      ],
+      messages: toOpenAIWireMessages(messages, options.systemPrompt),
       max_tokens: options.maxTokens ?? 4096,
       temperature: options.temperature,
       tools: tools.map(t => ({

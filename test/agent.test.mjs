@@ -1,221 +1,255 @@
-// Agent-level regression tests for defects F1–F6.
+// Agent-loop regression tests, driven end-to-end against a scripted local
+// OpenAI-compatible server (test/helpers/openai-stub.mjs) — no API key needed.
 //
-// A tiny local OpenAI-compatible server (test/helpers/stub-server.mjs) stands
-// in for a real provider so the agent loop runs with no API key and no network.
+// Each `F<n>:` test below corresponds to a defect from the audit.
 
 import { test, before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { startStubServer, hasConsecutiveAssistants, rolesOf } from './helpers/stub-server.mjs';
+
+import { startStubServer } from './helpers/openai-stub.mjs';
+
+// Redirect all persisted state before anything imports the config module, so
+// these tests never read or clobber the real ~/.cude.
+const home = mkdtempSync(join(tmpdir(), 'cude-home-'));
+process.env.CUDE_HOME = home;
 
 const { runAgent } = await import('../dist/core/agent.js');
-const { setWorkspaceRoot } = await import('../dist/core/tools.js');
+const { setApiKey } = await import('../dist/config/index.js');
+const { setTotalLimit, loadBudget, saveBudget } = await import('../dist/storage/budget.js');
 
-const ENDPOINT_ENV = 'CUDE_VLLM-ENDPOINT_KEY';
+/** Clears the total limit without depending on the F7 command surface. */
+function clearTotalLimit() {
+  const budget = loadBudget();
+  delete budget.totalLimit;
+  saveBudget(budget);
+}
 
-let dir;
-let stub;
+after(() => rmSync(home, { recursive: true, force: true }));
 
-before(async () => {
-  dir = mkdtempSync(join(tmpdir(), 'cude-agent-'));
-  setWorkspaceRoot(dir);
-  stub = await startStubServer([
-    { content: 'Thinking about the task.', tool_calls: [{ name: 'write_file', arguments: { path: join(dir, 'out.txt'), content: 'hello' } }] },
-    { content: 'Thinking again.', tool_calls: [{ name: 'write_file', arguments: { path: join(dir, 'out2.txt'), content: 'world' } }] },
-    { content: 'Thinking again.', tool_calls: [{ name: 'write_file', arguments: { path: join(dir, 'out3.txt'), content: '!' } }] },
-  ]);
-  process.env[ENDPOINT_ENV] = `http://127.0.0.1:${stub.port}`;
-  const { resetSpending } = await import('../dist/storage/budget.js');
-  resetSpending();
-});
+/** A tool call that always succeeds and mutates nothing. */
+const readPkg = { name: 'read_file', arguments: { path: 'package.json' } };
 
-after(async () => {
-  await stub.close();
-  rmSync(dir, { recursive: true, force: true });
-});
-
-describe('F1 — agent reports failure correctly', () => {
-  test('F1: a never-finishing agent returns success=false with stopReason=max_iterations', async () => {
-    process.env[ENDPOINT_ENV] = `http://127.0.0.1:${stub.port}`;
-    const { resetSpending } = await import('../dist/storage/budget.js');
-    resetSpending();
-
+/** Runs the agent against `script`, wired to the given provider. */
+async function runAgainstStub(script, { provider = 'vllm', model = 'stub-model', ...options } = {}) {
+  const server = await startStubServer(script);
+  try {
+    setApiKey(`${provider}-endpoint`, server.url);
     const result = await runAgent({
-      task: 'do something that never completes',
-      provider: 'vllm',
-      model: 'stub-model',
+      task: 'do the thing',
+      provider,
+      model,
       maxIterations: 3,
+      ...options,
     });
+    return { result, server };
+  } finally {
+    await server.close();
+  }
+}
 
-    assert.equal(result.success, false, 'should be unsuccessful');
+describe('F1: the agent must not report success when it failed', () => {
+  test('F1: an agent that never finishes fails with stopReason max_iterations', async () => {
+    // Every turn asks for another tool call, so the loop can only end by
+    // exhausting --max-iterations. This used to return success: true.
+    const { result } = await runAgainstStub([{ content: 'still working', toolCalls: [readPkg] }]);
+
+    assert.equal(result.success, false, 'an exhausted loop must not report success');
     assert.equal(result.stopReason, 'max_iterations');
     assert.equal(result.iterations, 3);
   });
 
-  test('F1: a budget-exceeded agent returns success=false with stopReason=budget_exceeded', async () => {
-    const doneStub = await startStubServer(['TASK COMPLETE: I did it']);
-    process.env[ENDPOINT_ENV] = `http://127.0.0.1:${doneStub.port}`;
-    const litellmEndpointEnv = 'CUDE_LITELLM-ENDPOINT_KEY';
-    const previousLitellmEndpoint = process.env[litellmEndpointEnv];
-    process.env[litellmEndpointEnv] = `http://127.0.0.1:${doneStub.port}`;
-    try {
-      const { setTotalLimit, resetSpending, loadBudget, saveBudget } = await import('../dist/storage/budget.js');
-      resetSpending();
-      setTotalLimit(0);
+  test('F1: a completed agent reports success with stopReason completed', async () => {
+    const { result } = await runAgainstStub([
+      { content: 'looking at the file', toolCalls: [readPkg] },
+      { content: 'TASK COMPLETE: read the manifest' },
+    ]);
 
-      const result = await runAgent({
-        task: 'complete this',
+    assert.equal(result.success, true);
+    assert.equal(result.stopReason, 'completed');
+    assert.match(result.output, /TASK COMPLETE/);
+  });
+
+  test('F1: a budget-exceeded agent fails with stopReason budget_exceeded', async () => {
+    // LiteLLM fronting a paid catalog model, so the budget gate applies (F6
+    // deliberately exempts free/local providers).
+    setTotalLimit(0);
+    try {
+      const { result } = await runAgainstStub([{ content: 'TASK COMPLETE: done' }], {
         provider: 'litellm',
-        model: 'stub-model',
-        maxIterations: 5,
+        model: 'gpt-4o',
       });
 
       assert.equal(result.success, false);
       assert.equal(result.stopReason, 'budget_exceeded');
-
-      const b = loadBudget();
-      b.totalLimit = undefined;
-      saveBudget(b);
     } finally {
-      await doneStub.close();
-      if (previousLitellmEndpoint === undefined) delete process.env[litellmEndpointEnv];
-      else process.env[litellmEndpointEnv] = previousLitellmEndpoint;
-      process.env[ENDPOINT_ENV] = `http://127.0.0.1:${stub.port}`;
+      clearTotalLimit();
     }
   });
 
-  test('F1: a completed agent returns success=true with stopReason=completed', async () => {
-    const doneStub = await startStubServer([
-      { content: 'Let me write a file.', tool_calls: [{ name: 'write_file', arguments: { path: join(dir, 'done.txt'), content: 'done' } }] },
-      'TASK COMPLETE: I wrote the file',
-    ]);
-    const prev = process.env[ENDPOINT_ENV];
-    process.env[ENDPOINT_ENV] = `http://127.0.0.1:${doneStub.port}`;
-    try {
-      const { resetSpending } = await import('../dist/storage/budget.js');
-      resetSpending();
-      const result = await runAgent({
-        task: 'write a file',
-        provider: 'vllm',
-        model: 'stub-model',
-        maxIterations: 5,
-      });
+  test('F1: a model that finishes with no output is not a success', async () => {
+    const { result } = await runAgainstStub([{ content: '' }]);
 
+    assert.equal(result.success, false);
+    assert.equal(result.stopReason, 'empty_output');
+  });
+});
+
+describe('F6: the budget gate does not block free or local providers', () => {
+  test('F6: a $0 limit does not stop a local vLLM run', async () => {
+    // Reproduced from the audit: `cude budget set 0` then a vLLM run returned
+    // "Budget exceeded: Total budget limit of $0 exceeded! Spent: $0.0000"
+    // after one iteration, even though vLLM hardcodes cost = 0.
+    setTotalLimit(0);
+    try {
+      const { result } = await runAgainstStub([{ content: 'TASK COMPLETE: done locally' }]);
+
+      assert.notEqual(result.stopReason, 'budget_exceeded');
       assert.equal(result.success, true);
-      assert.equal(result.stopReason, 'completed');
-      assert.match(result.output, /TASK COMPLETE/);
-      assert.ok(existsSync(join(dir, 'done.txt')), 'tool actually ran');
+      assert.equal(result.totalCost, 0);
     } finally {
-      await doneStub.close();
-      process.env[ENDPOINT_ENV] = prev;
-    }
-  });
-});
-
-describe('F2 — tool results travel through the tool-call protocol', () => {
-  test('F2: the assistant message carries tool_calls and each result is a role:tool message with the matching tool_call_id', async () => {
-    process.env[ENDPOINT_ENV] = `http://127.0.0.1:${stub.port}`;
-    const { resetSpending } = await import('../dist/storage/budget.js');
-    resetSpending();
-
-    const result = await runAgent({
-      task: 'use a tool',
-      provider: 'vllm',
-      model: 'stub-model',
-      maxIterations: 2,
-    });
-
-    // After a tool round-trip the agent issues a second request whose message
-    // history must include the prior assistant tool_calls and the role:'tool'
-    // reply keyed by tool_call_id.
-    assert.ok(stub.requests.length >= 2, 'expected at least two requests (one per iteration)');
-    const last = stub.requests[stub.requests.length - 1];
-    const msgs = last.body.messages;
-
-    const assistantWithTools = [...msgs].reverse().find((m) => m.role === 'assistant' && Array.isArray(m.tool_calls) && m.tool_calls.length > 0);
-    assert.ok(assistantWithTools, 'an assistant message must carry tool_calls');
-
-    const toolMessages = msgs.filter((m) => m.role === 'tool');
-    assert.ok(toolMessages.length > 0, 'at least one role:tool message must be present');
-    for (const tm of toolMessages) {
-      assert.ok(tm.tool_call_id, 'every tool message must carry a tool_call_id');
-      assert.ok(
-        assistantWithTools.tool_calls.some((tc) => tc.id === tm.tool_call_id),
-        `tool message tool_call_id "${tm.tool_call_id}" does not match any assistant tool_call`
-      );
+      clearTotalLimit();
     }
   });
 
-  test('F2: no outbound request ever contains two consecutive assistant messages', async () => {
-    process.env[ENDPOINT_ENV] = `http://127.0.0.1:${stub.port}`;
-    const { resetSpending } = await import('../dist/storage/budget.js');
-    resetSpending();
-
-    await runAgent({
-      task: 'keep using tools',
-      provider: 'vllm',
-      model: 'stub-model',
-      maxIterations: 3,
-    });
-
-    assert.ok(stub.requests.length > 0, 'expected requests');
-    for (const req of stub.requests) {
-      assert.equal(
-        hasConsecutiveAssistants(req),
-        false,
-        'a request contained two consecutive assistant messages'
-      );
-      // Invariant: never ends on an assistant message before a request is sent
-      const roles = rolesOf(req);
-      assert.notEqual(roles[roles.length - 1], 'assistant', 'request must not end on an assistant message');
-    }
-  });
-});
-
-describe('F3 — tool output truncation is explicit', () => {
-  test('F3: oversized tool output carries a truncation marker showing N of M chars', async () => {
-    // read_file is a safe, deterministic way to produce a large result for the
-    // model without spawning processes. We generate a file much bigger than the
-    // 4000-char limit and ask the agent to read it. The server is scripted to
-    // call read_file then finish, so only one tool round-trip is needed.
-    const big = join(dir, 'big.txt');
-    const payload = 'X'.repeat(20000);
-    writeFileSync(big, payload);
-
-    const truncStub = await startStubServer([
-      { content: 'Reading the file.', tool_calls: [{ name: 'read_file', arguments: { path: big } }] },
-      'TASK COMPLETE: read it',
-    ]);
-    const prev = process.env[ENDPOINT_ENV];
-    process.env[ENDPOINT_ENV] = `http://127.0.0.1:${truncStub.port}`;
+  test('F6: a paid provider is still gated by the same limit', async () => {
+    setTotalLimit(0);
     try {
-      const { resetSpending } = await import('../dist/storage/budget.js');
-      resetSpending();
-      const result = await runAgent({
-        task: 'read the file',
-        provider: 'vllm',
-        model: 'stub-model',
-        maxIterations: 2,
+      const { result } = await runAgainstStub([{ content: 'TASK COMPLETE: done' }], {
+        provider: 'litellm',
+        model: 'gpt-4o',
       });
-      assert.equal(result.success, true, `unexpected failure: ${result.stopReason}`);
-
-      // The second request's history holds the role:tool reply with the result.
-      assert.ok(truncStub.requests.length >= 1, 'expected a request');
-      const withTool = [...truncStub.requests].reverse().find((r) =>
-        r.body.messages.some((m) => m.role === 'tool')
-      );
-      assert.ok(withTool, 'no request contained a tool result message');
-      const toolMsg = withTool.body.messages.find((m) => m.role === 'tool');
-      assert.match(
-        toolMsg.content,
-        /\[truncated, showed \d+ of 20000 chars\]/,
-        'truncation marker must name how much was shown vs. the full length'
-      );
+      assert.equal(result.stopReason, 'budget_exceeded');
     } finally {
-      await truncStub.close();
-      process.env[ENDPOINT_ENV] = prev;
+      clearTotalLimit();
     }
+  });
+
+  test('F6: local providers and free catalog models are classified as free', async () => {
+    const { isFreeOrLocal } = await import('../dist/core/agent.js');
+    const { getProvider } = await import('../dist/providers/index.js');
+
+    for (const name of ['vllm', 'ollama', 'gguf']) {
+      assert.equal(isFreeOrLocal(getProvider(name), 'anything'), true, `${name} should be free`);
+    }
+    assert.equal(isFreeOrLocal(getProvider('openai'), 'gpt-4o'), false);
+    assert.equal(isFreeOrLocal(getProvider('anthropic'), 'claude-sonnet-5'), false);
+  });
+});
+
+describe('F3: truncated tool output says so', () => {
+  test('F3: oversized tool output carries an explicit truncation marker', async () => {
+    // package-lock.json is comfortably over the limit. The old code cut at 500
+    // chars and said nothing, so the model could not tell a short result from a
+    // clipped one.
+    const { server } = await runAgainstStub([
+      { content: 'reading a big file', toolCalls: [{ name: 'read_file', arguments: { path: 'package-lock.json' } }] },
+      { content: 'TASK COMPLETE: done' },
+    ]);
+
+    const toolMessage = server.sentMessages()[1].find(m => m.role === 'tool');
+    assert.match(
+      toolMessage.content,
+      /\.\.\. \[truncated, showed \d+ of \d+ chars\]/,
+      'a clipped result must announce that it was clipped'
+    );
+    assert.ok(
+      toolMessage.content.length > 4000,
+      `the limit must be workable, got ${toolMessage.content.length} chars`
+    );
+  });
+
+  test('F3: output within the limit is passed through untouched', async () => {
+    const { server } = await runAgainstStub([
+      { content: 'reading', toolCalls: [readPkg] },
+      { content: 'TASK COMPLETE: done' },
+    ]);
+
+    const toolMessage = server.sentMessages()[1].find(m => m.role === 'tool');
+    assert.doesNotMatch(toolMessage.content, /truncated/);
+  });
+});
+
+describe('F2: tool results travel inside the tool-call protocol', () => {
+  test('F2: the assistant message carries tool_calls and each result is a tool message with the matching tool_call_id', async () => {
+    // Previously the loop appended "Tool Results: ..." into the assistant's own
+    // message text, so the model never saw the arguments it had called with.
+    const { server } = await runAgainstStub([
+      { content: 'reading', toolCalls: [readPkg] },
+      { content: 'TASK COMPLETE: done' },
+    ]);
+
+    const sent = server.sentMessages();
+    assert.ok(sent.length >= 2, 'expected a follow-up request carrying the tool result');
+
+    const second = sent[1];
+    const assistant = second.find(m => m.role === 'assistant');
+    assert.ok(assistant, 'the history must contain the assistant turn');
+    assert.ok(Array.isArray(assistant.tool_calls), 'assistant message must carry tool_calls');
+    assert.equal(assistant.tool_calls.length, 1);
+    assert.equal(assistant.tool_calls[0].function.name, 'read_file');
+    assert.deepEqual(
+      JSON.parse(assistant.tool_calls[0].function.arguments),
+      { path: 'package.json' },
+      'the arguments the model chose must be visible to it on the next turn'
+    );
+
+    const toolMessages = second.filter(m => m.role === 'tool');
+    assert.equal(toolMessages.length, 1, 'each call needs its own tool message');
+    assert.equal(
+      toolMessages[0].tool_call_id,
+      assistant.tool_calls[0].id,
+      'the result must be keyed by the id of the call it answers'
+    );
+    assert.match(toolMessages[0].content, /cude-code/, 'the tool message carries the result');
+  });
+
+  test('F2: no request contains two consecutive assistant messages, and none ends on one', async () => {
+    const { server } = await runAgainstStub([
+      { content: 'step one', toolCalls: [readPkg] },
+      { content: 'step two', toolCalls: [readPkg] },
+      { content: 'step three', toolCalls: [readPkg] },
+    ]);
+
+    const sent = server.sentMessages();
+    assert.ok(sent.length >= 3, 'expected several turns');
+
+    for (const [i, messages] of sent.entries()) {
+      const roles = messages.map(m => m.role);
+      for (let j = 1; j < roles.length; j++) {
+        assert.ok(
+          !(roles[j] === 'assistant' && roles[j - 1] === 'assistant'),
+          `request ${i} has consecutive assistant messages: ${roles.join(', ')}`
+        );
+      }
+      assert.notEqual(
+        roles[roles.length - 1],
+        'assistant',
+        `request ${i} ends on an assistant message (Anthropic reads that as prefill): ${roles.join(', ')}`
+      );
+    }
+  });
+
+  test('F2: several calls in one turn each get their own tool message', async () => {
+    const { server } = await runAgainstStub([
+      {
+        content: 'reading twice',
+        toolCalls: [readPkg, { name: 'read_file', arguments: { path: 'tsconfig.json' } }],
+      },
+      { content: 'TASK COMPLETE: done' },
+    ]);
+
+    const second = server.sentMessages()[1];
+    const assistant = second.find(m => m.role === 'assistant');
+    const toolMessages = second.filter(m => m.role === 'tool');
+
+    assert.equal(assistant.tool_calls.length, 2);
+    assert.equal(toolMessages.length, 2);
+    assert.deepEqual(
+      toolMessages.map(m => m.tool_call_id).sort(),
+      assistant.tool_calls.map(tc => tc.id).sort()
+    );
   });
 });

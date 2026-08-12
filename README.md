@@ -29,7 +29,6 @@ See [docs/CUDE-CLAW.md](docs/CUDE-CLAW.md) for the workflow and extension guide.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
-[![npm](https://img.shields.io/npm/v/cude-code)](https://www.npmjs.com/package/cude-code)
 [![Status](https://img.shields.io/badge/Status-v0.1.0%20Early%20Release-blue)](./CHANGELOG.md)
 
 **The professional, multi-provider AI development CLI for your terminal**
@@ -37,7 +36,8 @@ See [docs/CUDE-CLAW.md](docs/CUDE-CLAW.md) for the workflow and extension guide.
 Cude Code is a feature-rich CLI tool for AI-assisted development. It supports 19 AI providers, 22 agent tools, browser automation, native RAG, and brings professional capabilities to your terminal.
 
 ```bash
-npm install -g cude-code
+git clone https://github.com/Emrevrg/Cude-Code.git
+cd Cude-Code && npm install && npm run build && npm link
 cude chat
 ```
 
@@ -57,8 +57,16 @@ cude chat
 ## Quick Start
 
 ### 1. Install
+
+Not on npm yet. Install from source — this builds the CLI and puts `cude` on
+your PATH:
+
 ```bash
-npm install -g cude-code
+git clone https://github.com/Emrevrg/Cude-Code.git
+cd Cude-Code
+npm install
+npm run build
+npm link
 ```
 
 Optional — only needed for the three browser tools:
@@ -129,7 +137,7 @@ cude config list-keys
 
 # Set defaults
 cude config set default-provider openai
-cude config set default-model gpt-4
+cude config set default-model gpt-4o
 ```
 
 ### Provider Management
@@ -252,11 +260,26 @@ Supported cost tracking for:
 ```bash
 export CUDE_OPENAI_KEY="sk-..."
 export CUDE_ANTHROPIC_KEY="sk-ant-..."
-export CUDE_DEFAULT_PROVIDER="openai"
-export CUDE_DEFAULT_MODEL="gpt-4"
 ```
 
-> Note: API keys are normally stored in `~/.cude/config.json` via `cude config set-key`. The environment variables above are read at startup as a fallback when no stored key exists, which is handy for CI runs and ephemeral shells.
+Keys are looked up in this order, per provider:
+
+1. `CUDE_<PROVIDER>_KEY`
+2. `CUDE_<PROVIDER>_API_KEY`
+3. the provider's conventional name — `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`,
+   `GEMINI_API_KEY`, `GROQ_API_KEY`, `REPLICATE_API_TOKEN` and so on, so keys
+   already in your shell are picked up without renaming them
+4. `~/.cude/config.json`, written by `cude config set-key`
+
+Environment variables are read at startup and take precedence over the stored
+config, which is handy for CI runs and ephemeral shells.
+
+Defaults are not environment variables — set them with:
+
+```bash
+cude config set default-provider openai
+cude config set default-model gpt-4o
+```
 
 ### Config Files
 - **Linux/macOS**: `~/.cude/config.json`
@@ -275,13 +298,16 @@ Sessions are stored under `~/.cude/sessions/` and spending records under `~/.cud
 
 ## Benchmarks
 
-| Metric | Value |
-|--------|-------|
-| Startup Time | < 100ms |
-| Token Estimation | Instant |
-| Max File Size | 100MB |
-| Memory Base | < 50MB |
-| Max Contexts | Unlimited |
+Measured on Node 22, Linux x64, from a release build. Reproduce with the
+commands in the right-hand column.
+
+| Metric | Value | How it was measured |
+|--------|-------|---------------------|
+| Cold start | ~0.31 s | `time node dist/index.js --version` |
+| Peak memory, cold start | ~84 MB | `VmHWM` of the CLI process |
+| Providers | 19 | `cude providers list` |
+| Agent tools | 22 | `TOOL_DEFINITIONS.length` |
+| Task types routed | 9 | `src/core/selector.ts` |
 
 ## Contributing
 

@@ -3,6 +3,14 @@ import chalk from 'chalk';
 
 let activeSpinner: Ora | null = null;
 
+/**
+ * ora writes to stderr by default. Run through the cude.ps1 shim, PowerShell
+ * wraps every stderr line in a NativeCommandError, so ordinary progress output
+ * ("- Checking provider availability...") reads as a crash. Progress is not an
+ * error: it belongs on stdout, and stderr stays for genuine failures.
+ */
+const SPINNER_STREAM = process.stdout;
+
 export function startSpinner(text: string): Ora {
   if (activeSpinner) {
     activeSpinner.stop();
@@ -11,7 +19,7 @@ export function startSpinner(text: string): Ora {
     text,
     color: 'cyan',
     spinner: 'dots',
-    stream: process.stdout,
+    stream: SPINNER_STREAM,
   }).start();
   return activeSpinner;
 }

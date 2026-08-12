@@ -1,6 +1,5 @@
 import { getApiKey } from '../config/index.js';
 import { calculateCost, estimateTokens, getModelsByProvider } from '../config/models.js';
-import { toOpenAIMessages } from './openai-mapping.js';
 import type {
   Provider,
   Message,
@@ -10,9 +9,11 @@ import type {
   ModelInfo,
   ToolDefinition,
   ToolCall,
+  CostClass,
 } from './types.js';
 
 import { fetchProvider } from './net.js';
+import { toOpenAIWireMessages } from './wire.js';
 
 // Reports an unreachable endpoint instead of a bare "fetch failed".
 const fetchLiteLLM = (url: string, init?: RequestInit): Promise<Response> =>
@@ -21,10 +22,14 @@ const fetchLiteLLM = (url: string, init?: RequestInit): Promise<Response> =>
 export class LiteLLMProvider implements Provider {
   name = 'litellm';
   displayName = 'LiteLLM Proxy';
+  costClass: CostClass = 'mixed';
 
   private getConfig() {
     const endpoint = getApiKey('litellm-endpoint') || 'http://localhost:8000';
-    const apiKey = getApiKey('litellm-key');
+    // `cude config set-key litellm <key>` stores it under "litellm"; this read
+    // "litellm-key", a name the CLI rejects, so setting a LiteLLM key silently
+    // did nothing. The old name stays as a fallback for hand-edited configs.
+    const apiKey = getApiKey('litellm') || getApiKey('litellm-key');
     return { endpoint, apiKey };
   }
 
@@ -55,6 +60,16 @@ export class LiteLLMProvider implements Provider {
     }));
   }
 
+  async listRemoteModels(): Promise<string[]> {
+    const { endpoint, apiKey } = this.getConfig();
+    const headers: Record<string, string> = {};
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+    const response = await fetchLiteLLM(`${endpoint}/models`, { headers });
+    if (!response.ok) throw new Error(`LiteLLM error: ${response.statusText}`);
+    const data = await response.json() as { data?: Array<{ id: string }> };
+    return (data.data ?? []).map(m => m.id);
+  }
+
   supportsTools(): boolean {
     return true;
   }
@@ -67,10 +82,7 @@ export class LiteLLMProvider implements Provider {
 
     const body = {
       model,
-      messages: [
-        ...(options.systemPrompt ? [{ role: 'system', content: options.systemPrompt }] : []),
-        ...toOpenAIMessages(messages),
-      ],
+      messages: toOpenAIWireMessages(messages, options.systemPrompt),
       max_tokens: options.maxTokens ?? 4096,
       temperature: options.temperature,
     };
@@ -107,10 +119,7 @@ export class LiteLLMProvider implements Provider {
 
     const body = {
       model,
-      messages: [
-        ...(options.systemPrompt ? [{ role: 'system', content: options.systemPrompt }] : []),
-        ...toOpenAIMessages(messages),
-      ],
+      messages: toOpenAIWireMessages(messages, options.systemPrompt),
       max_tokens: options.maxTokens ?? 4096,
       temperature: options.temperature,
       stream: true,
@@ -194,10 +203,7 @@ export class LiteLLMProvider implements Provider {
 
     const body = {
       model,
-      messages: [
-        ...(options.systemPrompt ? [{ role: 'system', content: options.systemPrompt }] : []),
-        ...toOpenAIMessages(messages),
-      ],
+      messages: toOpenAIWireMessages(messages, options.systemPrompt),
       max_tokens: options.maxTokens ?? 4096,
       temperature: options.temperature,
       tools: tools.map(t => ({

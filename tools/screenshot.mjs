@@ -1,12 +1,8 @@
-import { chromium } from 'playwright';
+import { launchChromium } from './chromium.mjs';
 
 const [, , url, out, w, h] = process.argv;
-const EXE = process.env.CUDE_CHROME_PATH || undefined;
 
-const browser = await chromium.launch({
-  executablePath: EXE,
-  args: ['--no-sandbox'],
-});
+const browser = await launchChromium();
 const page = await browser.newPage({
   viewport: { width: Number(w), height: Number(h) },
   deviceScaleFactor: 2,

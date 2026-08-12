@@ -1,7 +1,6 @@
 import OpenAI from 'openai';
 import { getApiKey } from '../config/index.js';
 import { calculateCost, estimateTokens, getModelsByProvider } from '../config/models.js';
-import { toOpenAIMessages } from './openai-mapping.js';
 import type {
   Provider,
   Message,
@@ -9,11 +8,14 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
+import { toOpenAIWireMessages } from './wire.js';
 
 export class DeepSeekProvider implements Provider {
   name = 'deepseek';
   displayName = 'DeepSeek';
+  costClass: CostClass = 'paid';
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('deepseek');
@@ -56,11 +58,10 @@ export class DeepSeekProvider implements Provider {
   async chat(messages: Message[], model: string, options: ChatOptions = {}): Promise<ChatResponse> {
     const client = this.getClient();
 
-    const dsMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    if (options.systemPrompt) {
-      dsMessages.push({ role: 'system', content: options.systemPrompt });
-    }
-    dsMessages.push(...toOpenAIMessages(messages));
+    const dsMessages = toOpenAIWireMessages(
+      messages,
+      options.systemPrompt
+    ) as unknown as OpenAI.Chat.ChatCompletionMessageParam[];
 
     const response = await client.chat.completions.create({
       model,
@@ -85,11 +86,10 @@ export class DeepSeekProvider implements Provider {
   ): Promise<ChatResponse> {
     const client = this.getClient();
 
-    const dsMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    if (options.systemPrompt) {
-      dsMessages.push({ role: 'system', content: options.systemPrompt });
-    }
-    dsMessages.push(...toOpenAIMessages(messages));
+    const dsMessages = toOpenAIWireMessages(
+      messages,
+      options.systemPrompt
+    ) as unknown as OpenAI.Chat.ChatCompletionMessageParam[];
 
     let fullContent = '';
     let inputTokens = 0;

@@ -7,11 +7,13 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
 
 export class HuggingFaceProvider implements Provider {
   name = 'huggingface';
   displayName = 'HuggingFace Inference API';
+  costClass: CostClass = 'mixed';
 
   private getClient() {
     const apiKey = getApiKey('huggingface');

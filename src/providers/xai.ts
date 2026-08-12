@@ -1,7 +1,6 @@
 import OpenAI from 'openai';
 import { getApiKey } from '../config/index.js';
 import { calculateCost, estimateTokens, getModelsByProvider } from '../config/models.js';
-import { toOpenAIMessages } from './openai-mapping.js';
 import type {
   Provider,
   Message,
@@ -9,11 +8,14 @@ import type {
   StreamChunk,
   ChatOptions,
   ModelInfo,
+  CostClass,
 } from './types.js';
+import { toOpenAIWireMessages } from './wire.js';
 
 export class XAIProvider implements Provider {
   name = 'xai';
   displayName = 'xAI Grok';
+  costClass: CostClass = 'paid';
 
   private getClient(): OpenAI {
     const apiKey = getApiKey('xai');
@@ -56,11 +58,10 @@ export class XAIProvider implements Provider {
   async chat(messages: Message[], model: string, options: ChatOptions = {}): Promise<ChatResponse> {
     const client = this.getClient();
 
-    const xaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    if (options.systemPrompt) {
-      xaiMessages.push({ role: 'system', content: options.systemPrompt });
-    }
-    xaiMessages.push(...toOpenAIMessages(messages));
+    const xaiMessages = toOpenAIWireMessages(
+      messages,
+      options.systemPrompt
+    ) as unknown as OpenAI.Chat.ChatCompletionMessageParam[];
 
     const response = await client.chat.completions.create({
       model,
@@ -85,11 +86,10 @@ export class XAIProvider implements Provider {
   ): Promise<ChatResponse> {
     const client = this.getClient();
 
-    const xaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    if (options.systemPrompt) {
-      xaiMessages.push({ role: 'system', content: options.systemPrompt });
-    }
-    xaiMessages.push(...toOpenAIMessages(messages));
+    const xaiMessages = toOpenAIWireMessages(
+      messages,
+      options.systemPrompt
+    ) as unknown as OpenAI.Chat.ChatCompletionMessageParam[];
 
     let fullContent = '';
     let inputTokens = 0;

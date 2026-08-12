@@ -39,69 +39,143 @@ const KEY_NAMES: Record<string, string> = {
   gguf:        'Local GGUF (llama.cpp)',
 };
 
-// `<provider>-endpoint` keys configure the base URL for self-hosted /
-// deployment providers (vllm-endpoint, litellm-endpoint, gguf-endpoint,
-// azure-endpoint). They are stored through the same key-store as API keys
-// (getApiKey('vllm-endpoint') etc.), so they must validate against the provider
-// list rather than being rejected as "Unknown provider". See F4.
-const VALID_PROVIDERS = PROVIDERS;
-const ENDPOINT_SUFFIX = '-endpoint';
+/**
+ * Providers that read a `<name>-endpoint` setting. These were unreachable:
+ * `config set-key` validated the whole key name against PROVIDERS, so
+ * `azure-endpoint` came back as "Unknown provider" — and since Azure's
+ * isConfigured() requires it, Azure could never become configured at all.
+ */
+export const ENDPOINT_SUFFIX = '-endpoint';
+export const ENDPOINT_PROVIDERS = ['azure', 'litellm', 'vllm', 'gguf'];
 
-function resolveKeyNameInfo(provider: string): { valid: boolean; isEndpoint: boolean; baseProvider: string } {
-  if (VALID_PROVIDERS.includes(provider)) {
-    return { valid: true, isEndpoint: false, baseProvider: provider };
+/** Shown in `config list` when no endpoint is set, so the default is visible. */
+const DEFAULT_ENDPOINT_HINTS: Record<string, string> = {
+  azure: 'Required — Azure cannot be used without it',
+  litellm: 'Defaults to http://localhost:8000',
+  vllm: 'Defaults to http://localhost:8000',
+  gguf: 'Defaults to http://localhost:8080',
+};
+
+export interface ParsedConfigKey {
+  kind: 'api-key' | 'endpoint';
+  provider: string;
+}
+
+/**
+ * Resolves a `config set-key` name. Returns null for names that are genuinely
+ * unknown, so those keep reporting an error.
+ */
+export function parseConfigKeyName(name: string): ParsedConfigKey | null {
+  const lower = name.toLowerCase();
+  if (lower.endsWith(ENDPOINT_SUFFIX)) {
+    const provider = lower.slice(0, -ENDPOINT_SUFFIX.length);
+    return ENDPOINT_PROVIDERS.includes(provider) ? { kind: 'endpoint', provider } : null;
   }
-  if (provider.endsWith(ENDPOINT_SUFFIX)) {
-    const base = provider.slice(0, -ENDPOINT_SUFFIX.length);
-    if (VALID_PROVIDERS.includes(base)) {
-      return { valid: true, isEndpoint: true, baseProvider: base };
-    }
+  return PROVIDERS.includes(lower) ? { kind: 'api-key', provider: lower } : null;
+}
+
+function describeUnknownKey(name: string): string {
+  if (name.toLowerCase().endsWith(ENDPOINT_SUFFIX)) {
+    return (
+      `Unknown endpoint setting: ${name}\n` +
+      `Providers that take an endpoint: ${ENDPOINT_PROVIDERS.map(p => p + ENDPOINT_SUFFIX).join(', ')}`
+    );
   }
-  return { valid: false, isEndpoint: false, baseProvider: provider };
+  return (
+    `Unknown provider: ${name}\n` +
+    `Valid providers: ${PROVIDERS.join(', ')}\n` +
+    `Endpoints: ${ENDPOINT_PROVIDERS.map(p => p + ENDPOINT_SUFFIX).join(', ')}`
+  );
+}
+
+function isValidEndpoint(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 export async function runConfigSetKey(provider: string, key?: string): Promise<void> {
-  const info = resolveKeyNameInfo(provider);
-  if (!info.valid) {
-    showError(`Unknown provider: ${provider}\nValid providers: ${PROVIDERS.join(', ')}`);
+  const parsed = parseConfigKeyName(provider);
+  if (!parsed) {
+    showError(describeUnknownKey(provider));
     process.exit(1);
+  }
+
+  if (parsed.kind === 'endpoint') {
+    await runConfigSetEndpoint(parsed.provider, key);
+    return;
   }
 
   let apiKey = key;
   if (!apiKey) {
-    const labelPart = info.isEndpoint ? `${info.baseProvider} endpoint URL` : `${KEY_NAMES[info.baseProvider] ?? info.baseProvider} API key`;
     const answer = await inquirer.prompt([
       {
-        type: 'input',
+        type: 'password',
         name: 'key',
-        message: `Enter ${labelPart}:`,
-        validate: (input: string) => input.trim().length > 0 || 'Value cannot be empty',
+        message: `Enter ${KEY_NAMES[parsed.provider] ?? parsed.provider} API key:`,
+        validate: (input: string) => input.trim().length > 0 || 'API key cannot be empty',
       },
     ]);
     apiKey = (answer as { key: string }).key;
   }
 
-  setApiKey(provider, apiKey!.trim());
-  if (info.isEndpoint) {
-    showSuccess(`Endpoint for ${KEY_NAMES[info.baseProvider] ?? info.baseProvider} saved successfully`);
-  } else {
-    showSuccess(`API key for ${KEY_NAMES[info.baseProvider] ?? info.baseProvider} saved successfully`);
-  }
+  setApiKey(parsed.provider, apiKey!.trim());
+  showSuccess(`API key for ${KEY_NAMES[parsed.provider] ?? parsed.provider} saved successfully`);
 }
 
-export async function runConfigRemoveKey(provider: string): Promise<void> {
-  const info = resolveKeyNameInfo(provider);
-  if (!info.valid) {
-    showError(`Unknown provider: ${provider}`);
+export async function runConfigSetEndpoint(provider: string, url?: string): Promise<void> {
+  const name = provider.toLowerCase().endsWith(ENDPOINT_SUFFIX)
+    ? provider.toLowerCase().slice(0, -ENDPOINT_SUFFIX.length)
+    : provider.toLowerCase();
+
+  if (!ENDPOINT_PROVIDERS.includes(name)) {
+    showError(
+      `${provider} does not take an endpoint.\n` +
+      `Providers that do: ${ENDPOINT_PROVIDERS.join(', ')}`
+    );
     process.exit(1);
   }
 
-  const label = info.isEndpoint
-    ? `${KEY_NAMES[info.baseProvider] ?? info.baseProvider} endpoint`
-    : `${KEY_NAMES[info.baseProvider] ?? info.baseProvider} API key`;
-  const existing = getApiKey(provider);
+  let endpoint = url;
+  if (!endpoint) {
+    const answer = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'endpoint',
+        message: `Enter the ${KEY_NAMES[name] ?? name} endpoint URL:`,
+        validate: (input: string) => isValidEndpoint(input.trim()) || 'Enter a valid http(s) URL',
+      },
+    ]);
+    endpoint = (answer as { endpoint: string }).endpoint;
+  }
+
+  endpoint = endpoint.trim().replace(/\/+$/, '');
+  if (!isValidEndpoint(endpoint)) {
+    showError(`Not a valid endpoint URL: ${endpoint}\nExample: https://example.openai.azure.com`);
+    process.exit(1);
+  }
+
+  setApiKey(`${name}${ENDPOINT_SUFFIX}`, endpoint);
+  showSuccess(`Endpoint for ${KEY_NAMES[name] ?? name} set to ${endpoint}`);
+}
+
+export async function runConfigRemoveKey(provider: string): Promise<void> {
+  const parsed = parseConfigKeyName(provider);
+  if (!parsed) {
+    showError(describeUnknownKey(provider));
+    process.exit(1);
+  }
+
+  const storedName = parsed.kind === 'endpoint' ? `${parsed.provider}${ENDPOINT_SUFFIX}` : parsed.provider;
+  const label = KEY_NAMES[parsed.provider] ?? parsed.provider;
+  const what = parsed.kind === 'endpoint' ? 'endpoint' : 'API key';
+
+  const existing = getApiKey(storedName);
   if (!existing) {
-    showInfo(`No ${label} configured`);
+    showInfo(`No ${what} configured for ${label}`);
     return;
   }
 
@@ -109,14 +183,14 @@ export async function runConfigRemoveKey(provider: string): Promise<void> {
     {
       type: 'confirm',
       name: 'confirm',
-      message: `Remove ${label}?`,
+      message: `Remove ${what} for ${label}?`,
       default: false,
     },
   ]);
 
   if ((answer as { confirm: boolean }).confirm) {
-    removeApiKey(provider);
-    showSuccess(`${label} removed`);
+    removeApiKey(storedName);
+    showSuccess(`${what[0].toUpperCase()}${what.slice(1)} for ${label} removed`);
   } else {
     showInfo('Cancelled');
   }
@@ -138,25 +212,19 @@ export function runConfigListKeys(): void {
     }
   }
 
-  // Providers that read a `<provider>-endpoint` base URL alongside a key.
-  // These are stored in the same key store; surface them so users can see what
-  // they configured rather than only guessing via `cude providers list`.
-  const ENDPOINT_PROVIDERS = ['azure', 'vllm', 'litellm', 'gguf'];
   console.log();
   console.log(chalk.bold.cyan('  Endpoints:'));
   console.log(chalk.dim('  ─────────────────────────────────────'));
-  let anyEndpoint = false;
   for (const provider of ENDPOINT_PROVIDERS) {
-    const endpoint = getApiKey(`${provider}-endpoint`);
+    const endpoint = getApiKey(`${provider}${ENDPOINT_SUFFIX}`);
+    const name = (KEY_NAMES[provider] ?? provider).padEnd(20);
     if (endpoint) {
-      anyEndpoint = true;
-      const name = (KEY_NAMES[provider] ?? provider).padEnd(20);
-      console.log(`  ${chalk.white(name)} ${chalk.green('✓')} ${chalk.cyan(endpoint)}`);
+      // A URL is not a secret, so show it — a wrong endpoint is otherwise
+      // invisible and looks like an unreachable server.
+      console.log(`  ${chalk.white(name)} ${chalk.green('✓')} ${chalk.dim(endpoint)}`);
+    } else {
+      console.log(`  ${chalk.dim(name)} ${chalk.dim('○')} ${chalk.dim(DEFAULT_ENDPOINT_HINTS[provider] ?? 'Not set')}`);
     }
-  }
-  if (!anyEndpoint) {
-    console.log(chalk.dim('  No endpoint URLs configured.'));
-    console.log(chalk.dim('  Set with: cude config set-key <provider>-endpoint <url>'));
   }
 
   const defaultProvider = getDefaultProvider();
@@ -196,9 +264,35 @@ export async function runConfigSet(setting: string, value: string): Promise<void
       break;
     }
 
-    default:
-      showError(`Unknown setting: ${setting}\nValid settings: default-provider, default-model`);
+    case 'workspace-root': {
+      const { setWorkspaceRootSetting } = await import('../config/index.js');
+      const { resolve } = await import('path');
+      const { existsSync } = await import('fs');
+      const root = resolve(value);
+      if (!existsSync(root)) {
+        showError(`Directory does not exist: ${root}`);
+        process.exit(1);
+      }
+      setWorkspaceRootSetting(root);
+      showSuccess(`Workspace root set to: ${root}`);
+      break;
+    }
+
+    default: {
+      // `cude config set <provider>-endpoint <url>` — the wording Azure's own
+      // error message tells people to use.
+      const parsed = parseConfigKeyName(setting);
+      if (parsed?.kind === 'endpoint') {
+        await runConfigSetEndpoint(parsed.provider, value);
+        break;
+      }
+      showError(
+        `Unknown setting: ${setting}\n` +
+        `Valid settings: default-provider, default-model, workspace-root, ` +
+        ENDPOINT_PROVIDERS.map(p => p + ENDPOINT_SUFFIX).join(', ')
+      );
       process.exit(1);
+    }
   }
 }
 

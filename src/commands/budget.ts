@@ -4,9 +4,9 @@ import {
   setTotalLimit,
   setMonthlyLimit,
   setAlertThreshold,
-  unsetLimits,
   resetSpending,
   getRemainingBudget,
+  unsetLimits,
 } from '../storage/budget.js';
 import { showSuccess, showInfo, showError, printKeyValue, printSeparator } from '../ui/display.js';
 import { format } from 'date-fns';
@@ -45,7 +45,7 @@ export async function runBudgetStatus(): Promise<void> {
     console.log();
     console.log(chalk.bold('  Limits:'));
     if (budget.totalLimit !== undefined) {
-      const pct = budget.totalLimit <= 0 ? 100 : Math.min(100, (budget.totalSpent / budget.totalLimit) * 100);
+      const pct = usedPercentage(budget.totalSpent, budget.totalLimit);
       const bar = createProgressBar(pct);
       printKeyValue('Total limit', `$${budget.totalLimit} ${bar} ${pct.toFixed(1)}%`, 'cyan');
       if (remaining.total !== undefined) {
@@ -53,7 +53,7 @@ export async function runBudgetStatus(): Promise<void> {
       }
     }
     if (budget.monthlyLimit !== undefined) {
-      const pct = budget.monthlyLimit <= 0 ? 100 : Math.min(100, (budget.monthlySpent / budget.monthlyLimit) * 100);
+      const pct = usedPercentage(budget.monthlySpent, budget.monthlyLimit);
       const bar = createProgressBar(pct);
       printKeyValue('Monthly limit', `$${budget.monthlyLimit} ${bar} ${pct.toFixed(1)}%`, 'cyan');
       if (remaining.monthly !== undefined) {
@@ -114,6 +114,46 @@ export async function runBudgetReset(): Promise<void> {
   }
 }
 
+export interface BudgetUnsetOptions {
+  total?: boolean;
+  monthly?: boolean;
+  alert?: boolean;
+  all?: boolean;
+}
+
+export async function runBudgetUnset(options: BudgetUnsetOptions = {}): Promise<void> {
+  const { all = false } = options;
+  const which = {
+    total: all || options.total === true,
+    monthly: all || options.monthly === true,
+    alert: all || options.alert === true,
+  };
+
+  if (!which.total && !which.monthly && !which.alert) {
+    showError(
+      'Nothing to unset. Choose what to clear:\n' +
+      '  cude budget unset --total     Remove the total spending limit\n' +
+      '  cude budget unset --monthly   Remove the monthly limit\n' +
+      '  cude budget unset --alert     Remove the alert threshold\n' +
+      '  cude budget unset --all       Remove all three'
+    );
+    process.exit(1);
+  }
+
+  const cleared = unsetLimits(which);
+  const names: string[] = [];
+  if (cleared.total) names.push('total limit');
+  if (cleared.monthly) names.push('monthly limit');
+  if (cleared.alert) names.push('alert threshold');
+
+  if (names.length === 0) {
+    showInfo('Nothing to clear — none of the selected limits were set.');
+    return;
+  }
+
+  showSuccess(`Cleared: ${names.join(', ')}`);
+}
+
 export async function runBudgetAlert(amount: string): Promise<void> {
   const value = parseFloat(amount);
   if (isNaN(value) || value < 0) {
@@ -125,13 +165,13 @@ export async function runBudgetAlert(amount: string): Promise<void> {
   showSuccess(`Budget alert threshold set to $${value}`);
 }
 
-export async function runBudgetUnset(options: { total?: boolean; monthly?: boolean; alert?: boolean; all?: boolean }): Promise<void> {
-  const cleared = unsetLimits(options);
-  if (cleared.length === 0) {
-    showError('Choose a limit to clear: --total, --monthly, --alert, or --all');
-    return;
-  }
-  showSuccess(`Cleared: ${cleared.join(', ')}`);
+/**
+ * A limit of 0 made `spent / limit` produce NaN, rendering "$0  NaN%".
+ * Nothing is left of a zero budget, so it reads as fully used.
+ */
+export function usedPercentage(spent: number, limit: number): number {
+  if (!Number.isFinite(limit) || limit <= 0) return 100;
+  return Math.min(100, (spent / limit) * 100);
 }
 
 function createProgressBar(percentage: number, width = 15): string {
