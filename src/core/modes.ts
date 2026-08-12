@@ -1,5 +1,6 @@
 import { TOOL_DEFINITIONS } from './tools.js';
 import type { TaskType } from './selector.js';
+import { getMcpToolDefinitions, isMcpTool } from '../mcp/registry.js';
 import type { ToolDefinition } from '../providers/types.js';
 
 /**
@@ -24,6 +25,12 @@ export interface AgentMode {
    * mode that says it only writes Markdown has to actually only write Markdown.
    */
   writablePathPattern?: RegExp;
+  /**
+   * Whether tools contributed by MCP servers are offered in this mode. An
+   * external server's tools are arbitrary, so a mode that promises read-only
+   * cannot honestly hand them to the model.
+   */
+  allowMcp: boolean;
   defaultTaskType: TaskType;
 }
 
@@ -64,6 +71,7 @@ export const MODES: Record<string, AgentMode> = {
       'match its conventions, and make the smallest change that does the job. ' +
       'Verify your work by running the project\'s own tests or build when they exist.',
     allowedTools: 'all',
+    allowMcp: true,
     defaultTaskType: 'code',
   },
 
@@ -78,6 +86,7 @@ export const MODES: Record<string, AgentMode> = {
       'found. You may write Markdown documents; you cannot modify source files.',
     allowedTools: [...READ_ONLY_TOOLS, 'write_file', 'create_directory'],
     writablePathPattern: /\.(md|markdown|txt)$/i,
+    allowMcp: false,
     defaultTaskType: 'complex',
   },
 
@@ -91,6 +100,7 @@ export const MODES: Record<string, AgentMode> = {
       'anything; if the answer requires a change, describe the change instead of ' +
       'attempting it.',
     allowedTools: READ_ONLY_TOOLS,
+    allowMcp: false,
     defaultTaskType: 'analysis',
   },
 
@@ -104,6 +114,7 @@ export const MODES: Record<string, AgentMode> = {
       'evidence is not there. State what you confirmed versus what you are inferring. ' +
       'Do not guess at a fix and declare victory without re-running the failing case.',
     allowedTools: 'all',
+    allowMcp: true,
     defaultTaskType: 'complex',
   },
 
@@ -117,6 +128,7 @@ export const MODES: Record<string, AgentMode> = {
       'before starting the next. Keep a running list of what is done and what remains, ' +
       'and stop to say so if a sub-task turns out to be blocked.',
     allowedTools: 'all',
+    allowMcp: true,
     defaultTaskType: 'complex',
   },
 };
@@ -139,6 +151,7 @@ export function listModes(): AgentMode[] {
 }
 
 export function isToolAllowed(mode: AgentMode, toolName: string): boolean {
+  if (isMcpTool(toolName)) return mode.allowMcp;
   if (mode.allowedTools === 'all') return true;
   return mode.allowedTools.includes(toolName);
 }
@@ -172,8 +185,11 @@ export function checkToolCall(
   return null;
 }
 
-/** The tool list handed to the model for this mode. */
+/** The tool list handed to the model for this mode, MCP tools included. */
 export function toolsForMode(mode: AgentMode): ToolDefinition[] {
-  if (mode.allowedTools === 'all') return TOOL_DEFINITIONS;
-  return TOOL_DEFINITIONS.filter(t => isToolAllowed(mode, t.name));
+  const builtIn =
+    mode.allowedTools === 'all'
+      ? TOOL_DEFINITIONS
+      : TOOL_DEFINITIONS.filter(t => isToolAllowed(mode, t.name));
+  return mode.allowMcp ? [...builtIn, ...getMcpToolDefinitions()] : builtIn;
 }

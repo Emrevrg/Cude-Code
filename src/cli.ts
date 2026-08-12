@@ -3,6 +3,11 @@ import chalk from 'chalk';
 import { showBanner } from './ui/display.js';
 import { isFirstRun, markFirstRunDone } from './config/index.js';
 
+/** Commander repeatable option collector. */
+function collect(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
 export function createCLI(): Command {
   const program = new Command();
 
@@ -221,6 +226,70 @@ export function createCLI(): Command {
     .action(async (amount: string) => {
       const { runBudgetAlert } = await import('./commands/budget.js');
       await runBudgetAlert(amount);
+    });
+
+  // ─── MCP COMMAND ──────────────────────────────────────────────────────────
+  const mcpCmd = program
+    .command('mcp')
+    .description('Model Context Protocol servers — extend the agent with external tools');
+
+  mcpCmd
+    .command('list', { isDefault: true })
+    .description('List configured MCP servers')
+    .action(async () => {
+      const { runMcpList } = await import('./commands/mcp.js');
+      runMcpList();
+    });
+
+  mcpCmd
+    .command('test')
+    .description('Connect to every server and list the tools it offers')
+    .action(async () => {
+      const { runMcpTest } = await import('./commands/mcp.js');
+      await runMcpTest();
+    });
+
+  mcpCmd
+    .command('add <name> [args...]')
+    .description('Add a server (verified before it is saved)')
+    .option('--command <cmd>', 'Executable to run for a stdio server')
+    .option('--url <url>', 'Endpoint for an HTTP server')
+    .option('--env <KEY=VALUE...>', 'Environment variable for a stdio server', collect, [])
+    .option('--header <KEY=VALUE...>', 'HTTP header for an HTTP server', collect, [])
+    .option('--cwd <dir>', 'Working directory for a stdio server')
+    .action(async (name: string, args: string[], options: {
+      command?: string;
+      url?: string;
+      env?: string[];
+      header?: string[];
+      cwd?: string;
+    }) => {
+      const { runMcpAdd } = await import('./commands/mcp.js');
+      await runMcpAdd(name, { ...options, args });
+    });
+
+  mcpCmd
+    .command('remove <name>')
+    .description('Remove a server')
+    .action(async (name: string) => {
+      const { runMcpRemove } = await import('./commands/mcp.js');
+      await runMcpRemove(name);
+    });
+
+  mcpCmd
+    .command('enable <name>')
+    .description('Re-enable a disabled server')
+    .action(async (name: string) => {
+      const { runMcpToggle } = await import('./commands/mcp.js');
+      runMcpToggle(name, false);
+    });
+
+  mcpCmd
+    .command('disable <name>')
+    .description('Keep a server configured but stop loading it')
+    .action(async (name: string) => {
+      const { runMcpToggle } = await import('./commands/mcp.js');
+      runMcpToggle(name, true);
     });
 
   // ─── CHECKPOINT COMMAND ───────────────────────────────────────────────────

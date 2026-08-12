@@ -9,6 +9,7 @@ import { MODELS } from '../config/models.js';
 import { getMode, toolsForMode, checkToolCall, DEFAULT_MODE, type AgentMode } from './modes.js';
 import { buildRulesPrompt } from './rules.js';
 import { recordCheckpoint, pruneCheckpoints } from './checkpoints.js';
+import { initializeMcp, shutdownMcp } from '../mcp/registry.js';
 import { randomUUID } from 'crypto';
 
 export interface AgentOptions {
@@ -163,6 +164,18 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
   // Checkpoints accumulate across runs; trim before adding more.
   pruneCheckpoints();
 
+  // Connect configured MCP servers so their tools are in the list the model
+  // sees. No servers configured is a fast no-op.
+  if (mode.allowMcp) {
+    const mcp = await initializeMcp();
+    if (verbose && mcp.connected.length > 0) {
+      console.log(chalk.dim(`  MCP: ${mcp.connected.join(', ')} (${mcp.tools.length} tools)`));
+    }
+    for (const failure of mcp.failed) {
+      console.log(chalk.yellow(`  MCP server "${failure.server}" unavailable: ${failure.reason}`));
+    }
+  }
+
   if (onConfirm) {
     setConfirmCallback(onConfirm);
   }
@@ -178,16 +191,22 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
     console.log(chalk.dim(`  Mode: ${mode.displayName} — ${mode.description}`));
   }
 
-  if (!provider.supportsTools() && provider.name !== 'ollama') {
-    // For providers without native tool support, use ReAct-style prompting
-    return runReActAgent(provider, model, options, maxIterations, mode);
-  }
+  try {
+    if (!provider.supportsTools() && provider.name !== 'ollama') {
+      // For providers without native tool support, use ReAct-style prompting
+      return await runReActAgent(provider, model, options, maxIterations, mode);
+    }
 
-  if (provider.supportsTools() && provider.chatWithTools) {
-    return runToolsAgent(provider, model, options, maxIterations, mode);
-  }
+    if (provider.supportsTools() && provider.chatWithTools) {
+      return await runToolsAgent(provider, model, options, maxIterations, mode);
+    }
 
-  return runReActAgent(provider, model, options, maxIterations, mode);
+    return await runReActAgent(provider, model, options, maxIterations, mode);
+  } finally {
+    // However the run ends, stop the servers — a stdio child would otherwise
+    // hold the CLI open.
+    await shutdownMcp();
+  }
 }
 
 async function runToolsAgent(
