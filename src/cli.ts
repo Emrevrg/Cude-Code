@@ -21,7 +21,7 @@ export function createCLI(): Command {
       if (opts.banner !== false) {
         // Only show banner on top-level commands, not sub-commands
         const name = thisCommand.name();
-        if (['chat', 'run'].includes(name)) {
+        if (['chat', 'run', 'claw'].includes(name)) {
           showBanner();
         }
       }
@@ -91,6 +91,35 @@ export function createCLI(): Command {
         yes: options.yes ?? false,
         maxIterations: parseInt(options.maxIterations ?? '10', 10),
         mode: options.mode,
+      });
+    });
+
+  // ─── CLAW COMMAND ─────────────────────────────────────────────────────────
+  program
+    .command('claw [task]')
+    .description('Interactive agent session — keeps context between turns and shows every edit before it happens')
+    .option('-p, --provider <name>', 'AI provider to use')
+    .option('-m, --model <name>', 'Model to use')
+    .option('--mode <name>', 'Agent mode: code|architect|ask|debug|orchestrator', 'code')
+    .option('--free', 'Use only free providers')
+    .option('-y, --yes', 'Apply edits without asking')
+    .option('--max-iterations <n>', 'Maximum steps per turn (default: 12)', '12')
+    .action(async (task: string | undefined, options: {
+      provider?: string;
+      model?: string;
+      mode?: string;
+      free?: boolean;
+      yes?: boolean;
+      maxIterations?: string;
+    }) => {
+      const { runClaw } = await import('./commands/claw.js');
+      await runClaw(task, {
+        provider: options.provider,
+        model: options.model,
+        mode: options.mode,
+        free: options.free ?? false,
+        yes: options.yes ?? false,
+        maxIterations: parseInt(options.maxIterations ?? '12', 10),
       });
     });
 
