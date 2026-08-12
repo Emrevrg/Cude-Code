@@ -80,7 +80,8 @@ export function showError(message: string): void {
 }
 
 export function showWarning(message: string): void {
-  console.warn(
+  // Not an error — stderr is reserved for genuine failures (see ui/spinner.ts).
+  console.log(
     boxen(chalk.yellow(message), {
       padding: { top: 0, bottom: 0, left: 1, right: 1 },
       borderColor: 'yellow',
