@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+- Fixed truthful agent completion and non-zero failure exits.
+- Restored native tool-call protocol and explicit output truncation markers.
+- Added workspace boundaries, Windows destructive-command detection, and
+  confirmation for file, git, and npm mutations.
+- Added self-hosted endpoint configuration, local budget exemptions,
+  `cude budget unset`, zero-limit protection, metadata-based provider labels,
+  stdout spinners, and the Cude Claw guide.
+
 ## [0.1.0] - 2026-08-10
 
 ### Bug Fixes

@@ -8,6 +8,24 @@
 
 # Cude Code - Professional AI Development CLI
 
+> A provider-agnostic, safety-first AI coding agent for the terminal.
+
+Current release: **v0.1.0** · [Changelog](CHANGELOG.md) · [Security policy](SECURITY.md)
+
+## Cude Claw
+
+Cude Claw is Cude Code's autonomous workflow mode: it plans a task, uses the
+built-in tools, verifies its work, and reports a truthful completion or failure
+status.
+
+```bash
+cude run "inspect the project, fix the failing tests, and summarize the changes"
+```
+
+Mutating file tools are confined to the workspace root, destructive commands
+require confirmation, and failed or budget-exhausted runs exit with status 1.
+See [docs/CUDE-CLAW.md](docs/CUDE-CLAW.md) for the workflow and extension guide.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
