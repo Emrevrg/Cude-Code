@@ -7,6 +7,7 @@ import { getWorkspaceRootSetting } from '../config/index.js';
 import type { ToolDefinition } from '../providers/types.js';
 import { BROWSER_TOOL_DEFINITIONS, executeBrowserTool } from './browser.js';
 import { RAG_TOOL_DEFINITIONS, executeRagTool } from './rag.js';
+import { isMcpTool, executeMcpTool, getMcpToolDefinitions } from '../mcp/registry.js';
 
 const execAsync = promisify(exec);
 
@@ -430,8 +431,15 @@ async function requireConfirmation(message: string): Promise<ToolResult | null> 
  * implementation happens to throw (e.g. `paths[0] must be of type string`),
  * which tells the model nothing about how to retry.
  */
+function findDefinition(name: string) {
+  return (
+    TOOL_DEFINITIONS.find(d => d.name === name) ??
+    getMcpToolDefinitions().find(d => d.name === name)
+  );
+}
+
 function findMissingParams(name: string, args: Record<string, unknown>): string[] {
-  const def = TOOL_DEFINITIONS.find((d) => d.name === name);
+  const def = findDefinition(name);
   const required = (def?.parameters as { required?: unknown })?.required;
   if (!Array.isArray(required)) return [];
   return required.filter(
@@ -446,7 +454,7 @@ export async function executeTool(
 ): Promise<ToolResult> {
   const missing = findMissingParams(name, args);
   if (missing.length > 0) {
-    const def = TOOL_DEFINITIONS.find((d) => d.name === name);
+    const def = findDefinition(name);
     const known = Object.keys(
       ((def?.parameters as { properties?: Record<string, unknown> })?.properties) ?? {}
     );
@@ -519,6 +527,12 @@ export async function executeTool(
       return executeRagTool(name, args);
 
     default:
+      // Tools contributed by MCP servers are namespaced and dispatched here,
+      // so mode checks, checkpoints and the agent loop treat them like any
+      // other tool.
+      if (isMcpTool(name)) {
+        return executeMcpTool(name, args);
+      }
       return { success: false, output: '', error: `Unknown tool: ${name}` };
   }
 }

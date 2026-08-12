@@ -1,11 +1,16 @@
 import chalk from 'chalk';
 import { selectProviderAndModel, type TaskType } from './selector.js';
-import { executeTool, TOOL_DEFINITIONS, setConfirmCallback, formatToolCall, formatToolResult } from './tools.js';
+import { executeTool, setConfirmCallback, formatToolCall, formatToolResult } from './tools.js';
 import { recordSpending } from '../storage/budget.js';
 import { checkBudgetAlert } from '../storage/budget.js';
 import type { Message } from '../providers/types.js';
 import { validateTurnSequence } from '../providers/wire.js';
 import { MODELS } from '../config/models.js';
+import { getMode, toolsForMode, checkToolCall, DEFAULT_MODE, type AgentMode } from './modes.js';
+import { buildRulesPrompt } from './rules.js';
+import { recordCheckpoint, pruneCheckpoints } from './checkpoints.js';
+import { initializeMcp, shutdownMcp } from '../mcp/registry.js';
+import { randomUUID } from 'crypto';
 
 export interface AgentOptions {
   task: string;
@@ -14,6 +19,8 @@ export interface AgentOptions {
   provider?: string;
   model?: string;
   maxIterations?: number;
+  /** Agent mode: code | architect | ask | debug | orchestrator. */
+  mode?: string;
   verbose?: boolean;
   onProgress?: (step: string) => void;
   onConfirm?: (message: string) => Promise<boolean>;
@@ -39,6 +46,8 @@ export interface AgentResult {
   totalOutputTokens: number;
   iterations: number;
   steps: AgentStep[];
+  /** Identifies this run's checkpoints: `cude checkpoint restore-run <id>`. */
+  runId: string;
 }
 
 /**
@@ -133,6 +142,13 @@ Important guidelines:
 
 When you have completed the task, start your final response with "TASK COMPLETE:" followed by a summary.`;
 
+/**
+ * Base prompt + the mode's own instructions + any rules the repository carries.
+ */
+export function buildSystemPrompt(mode: AgentMode): string {
+  return `${AGENT_SYSTEM_PROMPT}\n\n${mode.systemPrompt}${buildRulesPrompt()}`;
+}
+
 export async function runAgent(options: AgentOptions): Promise<AgentResult> {
   const {
     taskType = 'code',
@@ -143,6 +159,22 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
     verbose = false,
     onConfirm,
   } = options;
+
+  const mode = getMode(options.mode ?? DEFAULT_MODE);
+  // Checkpoints accumulate across runs; trim before adding more.
+  pruneCheckpoints();
+
+  // Connect configured MCP servers so their tools are in the list the model
+  // sees. No servers configured is a fast no-op.
+  if (mode.allowMcp) {
+    const mcp = await initializeMcp();
+    if (verbose && mcp.connected.length > 0) {
+      console.log(chalk.dim(`  MCP: ${mcp.connected.join(', ')} (${mcp.tools.length} tools)`));
+    }
+    for (const failure of mcp.failed) {
+      console.log(chalk.yellow(`  MCP server "${failure.server}" unavailable: ${failure.reason}`));
+    }
+  }
 
   if (onConfirm) {
     setConfirmCallback(onConfirm);
@@ -156,26 +188,37 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
 
   if (verbose) {
     console.log(chalk.dim(`  Using ${provider.displayName} / ${model} (${reason})`));
+    console.log(chalk.dim(`  Mode: ${mode.displayName} — ${mode.description}`));
   }
 
-  if (!provider.supportsTools() && provider.name !== 'ollama') {
-    // For providers without native tool support, use ReAct-style prompting
-    return runReActAgent(provider, model, options, maxIterations);
-  }
+  try {
+    if (!provider.supportsTools() && provider.name !== 'ollama') {
+      // For providers without native tool support, use ReAct-style prompting
+      return await runReActAgent(provider, model, options, maxIterations, mode);
+    }
 
-  if (provider.supportsTools() && provider.chatWithTools) {
-    return runToolsAgent(provider, model, options, maxIterations);
-  }
+    if (provider.supportsTools() && provider.chatWithTools) {
+      return await runToolsAgent(provider, model, options, maxIterations, mode);
+    }
 
-  return runReActAgent(provider, model, options, maxIterations);
+    return await runReActAgent(provider, model, options, maxIterations, mode);
+  } finally {
+    // However the run ends, stop the servers — a stdio child would otherwise
+    // hold the CLI open.
+    await shutdownMcp();
+  }
 }
 
 async function runToolsAgent(
   provider: import('../providers/types.js').Provider,
   model: string,
   options: AgentOptions,
-  maxIterations: number
+  maxIterations: number,
+  mode: AgentMode
 ): Promise<AgentResult> {
+  const systemPrompt = buildSystemPrompt(mode);
+  const tools = toolsForMode(mode);
+  const runId = randomUUID().slice(0, 8);
   const messages: Message[] = [
     { role: 'user', content: options.task },
   ];
@@ -217,8 +260,8 @@ async function runToolsAgent(
     const { response, toolCalls } = await provider.chatWithTools!(
       messages,
       model,
-      TOOL_DEFINITIONS,
-      { systemPrompt: AGENT_SYSTEM_PROMPT, maxTokens: 4096 }
+      tools,
+      { systemPrompt, maxTokens: 4096 }
     );
 
     totalCost += response.cost;
@@ -264,7 +307,16 @@ async function runToolsAgent(
         toolArgs: toolCall.arguments,
       });
 
-      const result = await executeTool(toolCall.name, toolCall.arguments);
+      // Prompt-level restriction is not restriction; the mode's budget is
+      // enforced here too, not just by omitting the tool definition.
+      const refusal = checkToolCall(mode, toolCall.name, toolCall.arguments);
+      if (!refusal) {
+        // Capture the pre-state so a wrong edit is reversible.
+        recordCheckpoint(runId, options.task, toolCall.name, toolCall.arguments);
+      }
+      const result = refusal
+        ? { success: false, output: '', error: refusal }
+        : await executeTool(toolCall.name, toolCall.arguments);
 
       if (options.verbose) {
         console.log(formatToolResult(result));
@@ -301,6 +353,7 @@ async function runToolsAgent(
     totalOutputTokens,
     iterations,
     steps,
+    runId,
   });
 }
 
@@ -308,13 +361,16 @@ async function runReActAgent(
   provider: import('../providers/types.js').Provider,
   model: string,
   options: AgentOptions,
-  maxIterations: number
+  maxIterations: number,
+  mode: AgentMode
 ): Promise<AgentResult> {
-  const toolDescriptions = TOOL_DEFINITIONS.map(t =>
+  const tools = toolsForMode(mode);
+  const runId = randomUUID().slice(0, 8);
+  const toolDescriptions = tools.map(t =>
     `- ${t.name}: ${t.description}`
   ).join('\n');
 
-  const systemPrompt = `${AGENT_SYSTEM_PROMPT}
+  const systemPrompt = `${buildSystemPrompt(mode)}
 
 Available tools:
 ${toolDescriptions}
@@ -395,7 +451,13 @@ When done, start with "TASK COMPLETE:" to finish.`;
         console.log(formatToolCall(toolName, toolArgs));
       }
 
-      const result = await executeTool(toolName, toolArgs);
+      const refusal = checkToolCall(mode, toolName, toolArgs);
+      if (!refusal) {
+        recordCheckpoint(runId, options.task, toolName, toolArgs);
+      }
+      const result = refusal
+        ? { success: false, output: '', error: refusal }
+        : await executeTool(toolName, toolArgs);
 
       if (options.verbose) {
         console.log(formatToolResult(result));
@@ -445,5 +507,6 @@ When done, start with "TASK COMPLETE:" to finish.`;
     totalOutputTokens,
     iterations,
     steps,
+    runId,
   });
 }

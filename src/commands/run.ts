@@ -1,6 +1,7 @@
 import readline from 'readline';
 import chalk from 'chalk';
 import { runAgent, STOP_REASON_MESSAGES } from '../core/agent.js';
+import { MUTATING_TOOLS } from '../core/checkpoints.js';
 import { selectProviderAndModel, type TaskType } from '../core/selector.js';
 import { startSpinner, stopSpinner, updateSpinner } from '../ui/spinner.js';
 import { showError, showSuccess, showCostInfo, renderMarkdown } from '../ui/display.js';
@@ -14,6 +15,7 @@ export interface RunCommandOptions {
   verbose?: boolean;
   yes?: boolean; // Skip confirmation
   maxIterations?: number;
+  mode?: string;
 }
 
 function formatStep(step: AgentStep): string {
@@ -50,6 +52,7 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
     verbose = false,
     yes = false,
     maxIterations = 10,
+    mode = 'code',
   } = options;
 
   if (!task || task.trim().length === 0) {
@@ -70,6 +73,7 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
   console.log(chalk.dim('  Task:     ') + chalk.white(task));
   console.log(chalk.dim('  Provider: ') + chalk.cyan(provider.displayName));
   console.log(chalk.dim('  Model:    ') + chalk.cyan(model));
+  console.log(chalk.dim('  Mode:     ') + chalk.cyan(mode));
   if (reason) console.log(chalk.dim(`  (${reason})`));
   console.log();
 
@@ -94,6 +98,7 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
       provider: preferredProvider,
       model: preferredModel,
       maxIterations,
+      mode,
       verbose,
       onProgress: (step) => {
         stepCount++;
@@ -138,6 +143,10 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
     console.log();
     console.log(chalk.dim('  ─────────────────────────────────'));
     console.log(chalk.dim('  Iterations: ') + result.iterations);
+    const changed = result.steps.some(s => s.type === 'tool_call' && s.toolName && MUTATING_TOOLS[s.toolName]);
+    if (changed) {
+      console.log(chalk.dim('  Undo:       ') + chalk.cyan(`cude checkpoint restore-run ${result.runId}`));
+    }
     showCostInfo(result.totalCost, result.totalInputTokens, result.totalOutputTokens);
     console.log();
 

@@ -3,6 +3,11 @@ import chalk from 'chalk';
 import { showBanner } from './ui/display.js';
 import { isFirstRun, markFirstRunDone } from './config/index.js';
 
+/** Commander repeatable option collector. */
+function collect(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
 export function createCLI(): Command {
   const program = new Command();
 
@@ -16,7 +21,7 @@ export function createCLI(): Command {
       if (opts.banner !== false) {
         // Only show banner on top-level commands, not sub-commands
         const name = thisCommand.name();
-        if (['chat', 'run'].includes(name)) {
+        if (['chat', 'run', 'claw'].includes(name)) {
           showBanner();
         }
       }
@@ -65,6 +70,7 @@ export function createCLI(): Command {
     .option('-v, --verbose', 'Show detailed execution steps')
     .option('-y, --yes', 'Skip confirmation prompt')
     .option('--max-iterations <n>', 'Maximum agent iterations (default: 10)', '10')
+    .option('--mode <name>', 'Agent mode: code|architect|ask|debug|orchestrator', 'code')
     .action(async (task: string, options: {
       provider?: string;
       model?: string;
@@ -73,6 +79,7 @@ export function createCLI(): Command {
       verbose?: boolean;
       yes?: boolean;
       maxIterations?: string;
+      mode?: string;
     }) => {
       const { runRun } = await import('./commands/run.js');
       await runRun(task, {
@@ -83,7 +90,67 @@ export function createCLI(): Command {
         verbose: options.verbose ?? false,
         yes: options.yes ?? false,
         maxIterations: parseInt(options.maxIterations ?? '10', 10),
+        mode: options.mode,
       });
+    });
+
+  // ─── CLAW COMMAND ─────────────────────────────────────────────────────────
+  program
+    .command('claw [task]')
+    .description('Interactive agent session — keeps context between turns and shows every edit before it happens')
+    .option('-p, --provider <name>', 'AI provider to use')
+    .option('-m, --model <name>', 'Model to use')
+    .option('--mode <name>', 'Agent mode: code|architect|ask|debug|orchestrator', 'code')
+    .option('--free', 'Use only free providers')
+    .option('-y, --yes', 'Apply edits without asking')
+    .option('--max-iterations <n>', 'Maximum steps per turn (default: 12)', '12')
+    .action(async (task: string | undefined, options: {
+      provider?: string;
+      model?: string;
+      mode?: string;
+      free?: boolean;
+      yes?: boolean;
+      maxIterations?: string;
+    }) => {
+      const { runClaw } = await import('./commands/claw.js');
+      await runClaw(task, {
+        provider: options.provider,
+        model: options.model,
+        mode: options.mode,
+        free: options.free ?? false,
+        yes: options.yes ?? false,
+        maxIterations: parseInt(options.maxIterations ?? '12', 10),
+      });
+    });
+
+  // ─── MODES COMMAND ────────────────────────────────────────────────────────
+  const modesCmd = program
+    .command('modes')
+    .description('Agent modes: what the agent does, and what it may touch');
+
+  modesCmd
+    .command('list', { isDefault: true })
+    .description('List available agent modes')
+    .action(async () => {
+      const { runModesList } = await import('./commands/modes.js');
+      runModesList();
+    });
+
+  modesCmd
+    .command('show <name>')
+    .description('Show the system prompt and tool budget for a mode')
+    .action(async (name: string) => {
+      const { runModesShow } = await import('./commands/modes.js');
+      runModesShow(name);
+    });
+
+  // ─── RULES COMMAND ────────────────────────────────────────────────────────
+  program
+    .command('rules')
+    .description('Show the project rule files the agent will follow')
+    .action(async () => {
+      const { runRulesList } = await import('./commands/modes.js');
+      runRulesList();
     });
 
   // ─── CONFIG COMMAND ───────────────────────────────────────────────────────
@@ -188,6 +255,116 @@ export function createCLI(): Command {
     .action(async (amount: string) => {
       const { runBudgetAlert } = await import('./commands/budget.js');
       await runBudgetAlert(amount);
+    });
+
+  // ─── MCP COMMAND ──────────────────────────────────────────────────────────
+  const mcpCmd = program
+    .command('mcp')
+    .description('Model Context Protocol servers — extend the agent with external tools');
+
+  mcpCmd
+    .command('list', { isDefault: true })
+    .description('List configured MCP servers')
+    .action(async () => {
+      const { runMcpList } = await import('./commands/mcp.js');
+      runMcpList();
+    });
+
+  mcpCmd
+    .command('test')
+    .description('Connect to every server and list the tools it offers')
+    .action(async () => {
+      const { runMcpTest } = await import('./commands/mcp.js');
+      await runMcpTest();
+    });
+
+  mcpCmd
+    .command('add <name> [args...]')
+    .description('Add a server (verified before it is saved)')
+    .option('--command <cmd>', 'Executable to run for a stdio server')
+    .option('--url <url>', 'Endpoint for an HTTP server')
+    .option('--env <KEY=VALUE...>', 'Environment variable for a stdio server', collect, [])
+    .option('--header <KEY=VALUE...>', 'HTTP header for an HTTP server', collect, [])
+    .option('--cwd <dir>', 'Working directory for a stdio server')
+    .action(async (name: string, args: string[], options: {
+      command?: string;
+      url?: string;
+      env?: string[];
+      header?: string[];
+      cwd?: string;
+    }) => {
+      const { runMcpAdd } = await import('./commands/mcp.js');
+      await runMcpAdd(name, { ...options, args });
+    });
+
+  mcpCmd
+    .command('remove <name>')
+    .description('Remove a server')
+    .action(async (name: string) => {
+      const { runMcpRemove } = await import('./commands/mcp.js');
+      await runMcpRemove(name);
+    });
+
+  mcpCmd
+    .command('enable <name>')
+    .description('Re-enable a disabled server')
+    .action(async (name: string) => {
+      const { runMcpToggle } = await import('./commands/mcp.js');
+      runMcpToggle(name, false);
+    });
+
+  mcpCmd
+    .command('disable <name>')
+    .description('Keep a server configured but stop loading it')
+    .action(async (name: string) => {
+      const { runMcpToggle } = await import('./commands/mcp.js');
+      runMcpToggle(name, true);
+    });
+
+  // ─── CHECKPOINT COMMAND ───────────────────────────────────────────────────
+  const checkpointCmd = program
+    .command('checkpoint')
+    .alias('checkpoints')
+    .description('Undo agent file edits');
+
+  checkpointCmd
+    .command('list', { isDefault: true })
+    .description('List checkpoints, grouped by agent run')
+    .action(async () => {
+      const { runCheckpointList } = await import('./commands/checkpoint.js');
+      runCheckpointList();
+    });
+
+  checkpointCmd
+    .command('show <id>')
+    .description('Show what a checkpoint captured')
+    .action(async (id: string) => {
+      const { runCheckpointShow } = await import('./commands/checkpoint.js');
+      runCheckpointShow(id);
+    });
+
+  checkpointCmd
+    .command('restore <id>')
+    .description('Undo a single tool call')
+    .action(async (id: string) => {
+      const { runCheckpointRestore } = await import('./commands/checkpoint.js');
+      runCheckpointRestore(id);
+    });
+
+  checkpointCmd
+    .command('restore-run <runId>')
+    .description('Undo every file change made by an agent run')
+    .action(async (runId: string) => {
+      const { runCheckpointRestoreRun } = await import('./commands/checkpoint.js');
+      runCheckpointRestoreRun(runId);
+    });
+
+  checkpointCmd
+    .command('clear')
+    .description('Delete all checkpoints')
+    .action(async () => {
+      const { runCheckpointClear } = await import('./commands/checkpoint.js');
+      await runCheckpointClear();
     });
 
   // ─── SESSIONS COMMAND ─────────────────────────────────────────────────────
