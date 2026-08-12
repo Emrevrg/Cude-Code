@@ -11,6 +11,7 @@ export function startSpinner(text: string): Ora {
     text,
     color: 'cyan',
     spinner: 'dots',
+    stream: process.stdout,
   }).start();
   return activeSpinner;
 }
