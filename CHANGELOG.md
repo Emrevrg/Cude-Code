@@ -4,11 +4,39 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### New Features
+
+- **Cude Claw** (`cude claw`) — an interactive agent session that keeps context
+  between turns. Every file edit is previewed as a diff and approved
+  individually (yes / no / always / stop); a declined edit tells the model not
+  to retry it, and stopping mid-turn still answers every tool call the model
+  made. `@path` in a message attaches that file's contents. Slash commands:
+  `/mode` `/model` `/tools` `/mcp` `/rules` `/cost` `/undo` `/checkpoints`
+  `/auto` `/clear` `/exit`.
+- **Agent modes** — `code`, `architect`, `ask`, `debug`, `orchestrator`. A mode
+  is a system prompt plus a tool budget, and the budget is enforced twice: when
+  the tool list is built for the model, and again before each call, so a model
+  asking for a tool it was never offered is refused rather than obeyed.
+  Architect's "writes only Markdown" is a path rule, not a description.
+  `cude run --mode <name>`, `cude modes list|show`.
+- **Project rules** — `AGENTS.md`, `CUDE.md`, `.cuderules` and
+  `.cude/rules/*.md` are discovered from the filesystem root down to the
+  workspace root, so a monorepo rule applies to packages inside it and the
+  closest file wins. `cude rules`.
+- **Checkpoints** — the state of every file is captured before the agent
+  changes it, so any edit can be undone. Works without git and never touches
+  git if present. `cude checkpoint list|show|restore|restore-run|clear`.
+- **MCP server support** — connect Model Context Protocol servers over stdio or
+  HTTP and their tools become agent tools, namespaced `mcp__<server>__<tool>`
+  so none can shadow a built-in. Implemented against the protocol directly, so
+  no new runtime dependency. `~/.cude/mcp.json` uses the same `mcpServers`
+  shape as other MCP clients. `cude mcp list|test|add|remove|enable|disable`.
+
+### Bug Fixes
+
 Ten defects found by an end-to-end audit that installed the tool and ran the
 agent against a local OpenAI-compatible endpoint. F1, F2 and F5 change
 behaviour.
-
-### Bug Fixes
 
 - **[F1] The agent reported success even when it failed.** `runToolsAgent` and
   `runReActAgent` returned `success: true` unconditionally, so a run that
@@ -59,8 +87,11 @@ behaviour.
 
 - `test/helpers/openai-stub.mjs`: a scripted local OpenAI-compatible server
   that makes the agent loop testable end-to-end with no API key.
-- New suites: `agent`, `wire`, `config`, `budget`, `providers`, `spinner`.
-  80 tests total, up from 24.
+- New suites: `agent`, `wire`, `config`, `budget`, `providers`, `spinner`,
+  `modes`, `checkpoints`, `mcp`, `claw`. 130 tests total, up from 24.
+- `test/helpers/mcp-stub-server.mjs`: a real stdio MCP server, so the client is
+  tested against the protocol rather than a mock of it — which is how two
+  Windows spawn bugs and a tool-namespacing bug were caught.
 - `CUDE_HOME` redirects persisted state so budget- and config-backed behaviour
   can be tested without touching the real `~/.cude`.
 
