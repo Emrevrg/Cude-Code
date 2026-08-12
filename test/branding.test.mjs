@@ -5,14 +5,12 @@ import { join } from 'node:path';
 
 const root = process.cwd();
 
-test('branding assets are present and README uses the CLI preview and poster', () => {
-  const cli = join(root, 'assets', 'cude-cli.png');
+test('branding assets are present and README uses the poster', () => {
   const poster = join(root, 'assets', 'cude-poster.png');
   const readme = readFileSync(join(root, 'README.md'), 'utf8');
 
-  assert.ok(existsSync(cli) && statSync(cli).size > 0, 'CLI preview is missing');
   assert.ok(existsSync(poster) && statSync(poster).size > 0, 'canonical poster is missing');
-  assert.match(readme, /assets\/cude-cli\.png/);
+  assert.doesNotMatch(readme, /assets\/cude-cli\.png/);
   assert.match(readme, /assets\/cude-poster\.png/);
   assert.doesNotMatch(readme, /cude-banner\.svg|cude-logo\.png/);
   assert.equal(existsSync(join(root, 'assets', 'cude-banner.svg')), false);

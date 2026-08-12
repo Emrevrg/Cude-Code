@@ -2,10 +2,6 @@
   <img src="./assets/cude-poster.png" alt="Cude Code — YAZ. ANLA. ÜRET. poster" width="1200">
 </p>
 
-<p align="center">
-  <img src="./assets/cude-cli.png" alt="Cude Code CLI running with the canonical logo" width="900">
-</p>
-
 # Cude Code - Professional AI Development CLI
 
 > A provider-agnostic, safety-first AI coding agent for the terminal.
