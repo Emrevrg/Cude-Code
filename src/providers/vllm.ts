@@ -12,6 +12,7 @@ import type {
 } from './types.js';
 
 import { fetchProvider } from './net.js';
+import { toOpenAIWireMessages } from './wire.js';
 
 // Reports an unreachable endpoint instead of a bare "fetch failed".
 const fetchVllm = (url: string, init?: RequestInit): Promise<Response> =>
@@ -60,10 +61,7 @@ export class VLLMProvider implements Provider {
 
     const body = {
       model,
-      messages: [
-        ...(options.systemPrompt ? [{ role: 'system', content: options.systemPrompt }] : []),
-        ...messages,
-      ],
+      messages: toOpenAIWireMessages(messages, options.systemPrompt),
       max_tokens: options.maxTokens ?? 4096,
       temperature: options.temperature,
     };
@@ -97,10 +95,7 @@ export class VLLMProvider implements Provider {
 
     const body = {
       model,
-      messages: [
-        ...(options.systemPrompt ? [{ role: 'system', content: options.systemPrompt }] : []),
-        ...messages,
-      ],
+      messages: toOpenAIWireMessages(messages, options.systemPrompt),
       max_tokens: options.maxTokens ?? 4096,
       temperature: options.temperature,
       stream: true,
@@ -180,10 +175,7 @@ export class VLLMProvider implements Provider {
 
     const body = {
       model,
-      messages: [
-        ...(options.systemPrompt ? [{ role: 'system', content: options.systemPrompt }] : []),
-        ...messages,
-      ],
+      messages: toOpenAIWireMessages(messages, options.systemPrompt),
       max_tokens: options.maxTokens ?? 4096,
       temperature: options.temperature,
       tools: tools.map(t => ({

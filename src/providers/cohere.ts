@@ -9,6 +9,7 @@ import type {
   ChatOptions,
   ModelInfo,
 } from './types.js';
+import { toOpenAIWireMessages } from './wire.js';
 
 export class CohereProvider implements Provider {
   name = 'cohere';
@@ -55,13 +56,10 @@ export class CohereProvider implements Provider {
   async chat(messages: Message[], model: string, options: ChatOptions = {}): Promise<ChatResponse> {
     const client = this.getClient();
 
-    const cohereMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    if (options.systemPrompt) {
-      cohereMessages.push({ role: 'system', content: options.systemPrompt });
-    }
-    for (const m of messages) {
-      cohereMessages.push({ role: m.role, content: m.content });
-    }
+    const cohereMessages = toOpenAIWireMessages(
+      messages,
+      options.systemPrompt
+    ) as unknown as OpenAI.Chat.ChatCompletionMessageParam[];
 
     const response = await client.chat.completions.create({
       model,
@@ -86,13 +84,10 @@ export class CohereProvider implements Provider {
   ): Promise<ChatResponse> {
     const client = this.getClient();
 
-    const cohereMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    if (options.systemPrompt) {
-      cohereMessages.push({ role: 'system', content: options.systemPrompt });
-    }
-    for (const m of messages) {
-      cohereMessages.push({ role: m.role, content: m.content });
-    }
+    const cohereMessages = toOpenAIWireMessages(
+      messages,
+      options.systemPrompt
+    ) as unknown as OpenAI.Chat.ChatCompletionMessageParam[];
 
     let fullContent = '';
     let inputTokens = 0;

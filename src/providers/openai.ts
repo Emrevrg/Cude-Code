@@ -11,6 +11,7 @@ import type {
   ToolDefinition,
   ToolCall,
 } from './types.js';
+import { toOpenAIWireMessages } from './wire.js';
 
 export class OpenAIProvider implements Provider {
   name = 'openai';
@@ -54,13 +55,12 @@ export class OpenAIProvider implements Provider {
   async chat(messages: Message[], model: string, options: ChatOptions = {}): Promise<ChatResponse> {
     const client = this.getClient();
 
-    const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    if (options.systemPrompt) {
-      openaiMessages.push({ role: 'system', content: options.systemPrompt });
-    }
-    for (const m of messages) {
-      openaiMessages.push({ role: m.role, content: m.content });
-    }
+    // Tool calls and tool results travel in the protocol's own fields — see
+    // providers/wire.ts.
+    const openaiMessages = toOpenAIWireMessages(
+      messages,
+      options.systemPrompt
+    ) as unknown as OpenAI.Chat.ChatCompletionMessageParam[];
 
     const response = await client.chat.completions.create({
       model,
@@ -85,13 +85,12 @@ export class OpenAIProvider implements Provider {
   ): Promise<ChatResponse> {
     const client = this.getClient();
 
-    const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    if (options.systemPrompt) {
-      openaiMessages.push({ role: 'system', content: options.systemPrompt });
-    }
-    for (const m of messages) {
-      openaiMessages.push({ role: m.role, content: m.content });
-    }
+    // Tool calls and tool results travel in the protocol's own fields — see
+    // providers/wire.ts.
+    const openaiMessages = toOpenAIWireMessages(
+      messages,
+      options.systemPrompt
+    ) as unknown as OpenAI.Chat.ChatCompletionMessageParam[];
 
     let fullContent = '';
     let inputTokens = 0;
@@ -136,13 +135,12 @@ export class OpenAIProvider implements Provider {
   ): Promise<{ response: ChatResponse; toolCalls: ToolCall[] }> {
     const client = this.getClient();
 
-    const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    if (options.systemPrompt) {
-      openaiMessages.push({ role: 'system', content: options.systemPrompt });
-    }
-    for (const m of messages) {
-      openaiMessages.push({ role: m.role, content: m.content });
-    }
+    // Tool calls and tool results travel in the protocol's own fields — see
+    // providers/wire.ts.
+    const openaiMessages = toOpenAIWireMessages(
+      messages,
+      options.systemPrompt
+    ) as unknown as OpenAI.Chat.ChatCompletionMessageParam[];
 
     const openaiTools: OpenAI.Chat.ChatCompletionTool[] = tools.map(t => ({
       type: 'function' as const,

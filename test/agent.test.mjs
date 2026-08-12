@@ -96,3 +96,85 @@ describe('F1: the agent must not report success when it failed', () => {
     assert.equal(result.stopReason, 'empty_output');
   });
 });
+
+describe('F2: tool results travel inside the tool-call protocol', () => {
+  test('F2: the assistant message carries tool_calls and each result is a tool message with the matching tool_call_id', async () => {
+    // Previously the loop appended "Tool Results: ..." into the assistant's own
+    // message text, so the model never saw the arguments it had called with.
+    const { server } = await runAgainstStub([
+      { content: 'reading', toolCalls: [readPkg] },
+      { content: 'TASK COMPLETE: done' },
+    ]);
+
+    const sent = server.sentMessages();
+    assert.ok(sent.length >= 2, 'expected a follow-up request carrying the tool result');
+
+    const second = sent[1];
+    const assistant = second.find(m => m.role === 'assistant');
+    assert.ok(assistant, 'the history must contain the assistant turn');
+    assert.ok(Array.isArray(assistant.tool_calls), 'assistant message must carry tool_calls');
+    assert.equal(assistant.tool_calls.length, 1);
+    assert.equal(assistant.tool_calls[0].function.name, 'read_file');
+    assert.deepEqual(
+      JSON.parse(assistant.tool_calls[0].function.arguments),
+      { path: 'package.json' },
+      'the arguments the model chose must be visible to it on the next turn'
+    );
+
+    const toolMessages = second.filter(m => m.role === 'tool');
+    assert.equal(toolMessages.length, 1, 'each call needs its own tool message');
+    assert.equal(
+      toolMessages[0].tool_call_id,
+      assistant.tool_calls[0].id,
+      'the result must be keyed by the id of the call it answers'
+    );
+    assert.match(toolMessages[0].content, /cude-code/, 'the tool message carries the result');
+  });
+
+  test('F2: no request contains two consecutive assistant messages, and none ends on one', async () => {
+    const { server } = await runAgainstStub([
+      { content: 'step one', toolCalls: [readPkg] },
+      { content: 'step two', toolCalls: [readPkg] },
+      { content: 'step three', toolCalls: [readPkg] },
+    ]);
+
+    const sent = server.sentMessages();
+    assert.ok(sent.length >= 3, 'expected several turns');
+
+    for (const [i, messages] of sent.entries()) {
+      const roles = messages.map(m => m.role);
+      for (let j = 1; j < roles.length; j++) {
+        assert.ok(
+          !(roles[j] === 'assistant' && roles[j - 1] === 'assistant'),
+          `request ${i} has consecutive assistant messages: ${roles.join(', ')}`
+        );
+      }
+      assert.notEqual(
+        roles[roles.length - 1],
+        'assistant',
+        `request ${i} ends on an assistant message (Anthropic reads that as prefill): ${roles.join(', ')}`
+      );
+    }
+  });
+
+  test('F2: several calls in one turn each get their own tool message', async () => {
+    const { server } = await runAgainstStub([
+      {
+        content: 'reading twice',
+        toolCalls: [readPkg, { name: 'read_file', arguments: { path: 'tsconfig.json' } }],
+      },
+      { content: 'TASK COMPLETE: done' },
+    ]);
+
+    const second = server.sentMessages()[1];
+    const assistant = second.find(m => m.role === 'assistant');
+    const toolMessages = second.filter(m => m.role === 'tool');
+
+    assert.equal(assistant.tool_calls.length, 2);
+    assert.equal(toolMessages.length, 2);
+    assert.deepEqual(
+      toolMessages.map(m => m.tool_call_id).sort(),
+      assistant.tool_calls.map(tc => tc.id).sort()
+    );
+  });
+});

@@ -1,6 +1,12 @@
 export interface Message {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
+  /** Set on an assistant message that requested tools this turn. */
+  tool_calls?: ToolCall[];
+  /** Set on a `role: 'tool'` message; matches the id of the call it answers. */
+  tool_call_id?: string;
+  /** Optional tool name, carried alongside `tool_call_id` for readability. */
+  name?: string;
 }
 
 export interface StreamChunk {

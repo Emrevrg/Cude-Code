@@ -4,6 +4,7 @@ import { executeTool, TOOL_DEFINITIONS, setConfirmCallback, formatToolCall, form
 import { recordSpending } from '../storage/budget.js';
 import { checkBudgetAlert } from '../storage/budget.js';
 import type { Message } from '../providers/types.js';
+import { validateTurnSequence } from '../providers/wire.js';
 
 export interface AgentOptions {
   task: string;
@@ -162,6 +163,13 @@ async function runToolsAgent(
 
     options.onProgress?.(`Step ${iterations}: Thinking...`);
 
+    // A malformed turn sequence is a bug in this loop, not a model problem —
+    // fail loudly rather than shipping a request that means something else.
+    const violation = validateTurnSequence(messages);
+    if (violation) {
+      throw new Error(`Refusing to send a malformed conversation: ${violation}`);
+    }
+
     const { response, toolCalls } = await provider.chatWithTools!(
       messages,
       model,
@@ -189,8 +197,15 @@ async function runToolsAgent(
       break;
     }
 
+    // The assistant message carries the calls it made, so the model can see the
+    // arguments it chose; each result then comes back as its own tool message.
+    messages.push({
+      role: 'assistant',
+      content: response.content,
+      tool_calls: toolCalls,
+    });
+
     // Execute tool calls
-    const toolResults: string[] = [];
     for (const toolCall of toolCalls) {
       options.onProgress?.(`Step ${iterations}: Running ${toolCall.name}...`);
 
@@ -216,16 +231,15 @@ async function runToolsAgent(
         content: result.success ? result.output : `Error: ${result.error}`,
       });
 
-      toolResults.push(
-        `Tool: ${toolCall.name}\nResult: ${result.success ? result.output.substring(0, 500) : `ERROR: ${result.error}`}`
-      );
+      messages.push({
+        role: 'tool',
+        tool_call_id: toolCall.id,
+        name: toolCall.name,
+        content: result.success
+          ? result.output.substring(0, 500)
+          : `ERROR: ${result.error}`,
+      });
     }
-
-    // Add assistant message with tool use
-    messages.push({
-      role: 'assistant',
-      content: response.content + '\n\nTool Results:\n' + toolResults.join('\n---\n'),
-    });
 
     // Check if task is complete
     if (response.content.includes('TASK COMPLETE:') || response.content.includes('Task complete:')) {
