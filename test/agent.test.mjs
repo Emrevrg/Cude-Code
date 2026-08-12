@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { startStubServer, hasConsecutiveAssistants, rolesOf } from './helpers/stub-server.mjs';
 
 const { runAgent } = await import('../dist/core/agent.js');
+const { setWorkspaceRoot } = await import('../dist/core/tools.js');
 
 const ENDPOINT_ENV = 'CUDE_VLLM-ENDPOINT_KEY';
 
@@ -19,6 +20,7 @@ let stub;
 
 before(async () => {
   dir = mkdtempSync(join(tmpdir(), 'cude-agent-'));
+  setWorkspaceRoot(dir);
   stub = await startStubServer([
     { content: 'Thinking about the task.', tool_calls: [{ name: 'write_file', arguments: { path: join(dir, 'out.txt'), content: 'hello' } }] },
     { content: 'Thinking again.', tool_calls: [{ name: 'write_file', arguments: { path: join(dir, 'out2.txt'), content: 'world' } }] },
@@ -55,6 +57,9 @@ describe('F1 — agent reports failure correctly', () => {
   test('F1: a budget-exceeded agent returns success=false with stopReason=budget_exceeded', async () => {
     const doneStub = await startStubServer(['TASK COMPLETE: I did it']);
     process.env[ENDPOINT_ENV] = `http://127.0.0.1:${doneStub.port}`;
+    const litellmEndpointEnv = 'CUDE_LITELLM-ENDPOINT_KEY';
+    const previousLitellmEndpoint = process.env[litellmEndpointEnv];
+    process.env[litellmEndpointEnv] = `http://127.0.0.1:${doneStub.port}`;
     try {
       const { setTotalLimit, resetSpending, loadBudget, saveBudget } = await import('../dist/storage/budget.js');
       resetSpending();
@@ -62,7 +67,7 @@ describe('F1 — agent reports failure correctly', () => {
 
       const result = await runAgent({
         task: 'complete this',
-        provider: 'vllm',
+        provider: 'litellm',
         model: 'stub-model',
         maxIterations: 5,
       });
@@ -75,6 +80,8 @@ describe('F1 — agent reports failure correctly', () => {
       saveBudget(b);
     } finally {
       await doneStub.close();
+      if (previousLitellmEndpoint === undefined) delete process.env[litellmEndpointEnv];
+      else process.env[litellmEndpointEnv] = previousLitellmEndpoint;
       process.env[ENDPOINT_ENV] = `http://127.0.0.1:${stub.port}`;
     }
   });

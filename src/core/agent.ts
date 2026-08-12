@@ -41,6 +41,11 @@ export interface AgentStep {
 const TOOL_OUTPUT_LIMIT = 4000;
 const REACT_OUTPUT_LIMIT = 4000;
 
+function isBudgetExempt(provider: import('../providers/types.js').Provider, model: string): boolean {
+  if (['ollama', 'vllm', 'gguf'].includes(provider.name)) return true;
+  return provider.listModels().some(m => m.id === model && (m.free || m.local));
+}
+
 function truncate(text: string, limit: number): string {
   if (text.length <= limit) return text;
   return text.substring(0, limit) + `\n... [truncated, showed ${limit} of ${text.length} chars]`;
@@ -125,7 +130,7 @@ async function runToolsAgent(
     iterations++;
 
     // Check budget
-    const budgetCheck = checkBudgetAlert();
+    const budgetCheck = isBudgetExempt(provider, model) ? { exceeded: false, nearAlert: false, message: undefined } : checkBudgetAlert();
     if (budgetCheck.exceeded) {
       finalOutput = `Budget exceeded: ${budgetCheck.message}`;
       stopReason = 'budget_exceeded';
@@ -273,7 +278,7 @@ When done, start with "TASK COMPLETE:" to finish.`;
   while (iterations < maxIterations) {
     iterations++;
 
-    const budgetCheck = checkBudgetAlert();
+    const budgetCheck = isBudgetExempt(provider, model) ? { exceeded: false, nearAlert: false, message: undefined } : checkBudgetAlert();
     if (budgetCheck.exceeded) {
       finalOutput = `Budget exceeded: ${budgetCheck.message}`;
       stopReason = 'budget_exceeded';
