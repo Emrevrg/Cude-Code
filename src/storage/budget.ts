@@ -125,6 +125,16 @@ export function setAlertThreshold(amount: number): void {
   saveBudget(budget);
 }
 
+export function unsetLimits(options: { total?: boolean; monthly?: boolean; alert?: boolean; all?: boolean }): string[] {
+  const budget = loadBudget();
+  const cleared: string[] = [];
+  if (options.all || options.total) { budget.totalLimit = undefined; cleared.push('total limit'); }
+  if (options.all || options.monthly) { budget.monthlyLimit = undefined; cleared.push('monthly limit'); }
+  if (options.all || options.alert) { budget.alertThreshold = undefined; cleared.push('alert threshold'); }
+  saveBudget(budget);
+  return cleared;
+}
+
 export function resetSpending(): void {
   const budget = loadBudget();
   budget.totalSpent = 0;

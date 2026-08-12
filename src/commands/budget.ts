@@ -4,6 +4,7 @@ import {
   setTotalLimit,
   setMonthlyLimit,
   setAlertThreshold,
+  unsetLimits,
   resetSpending,
   getRemainingBudget,
 } from '../storage/budget.js';
@@ -44,7 +45,7 @@ export async function runBudgetStatus(): Promise<void> {
     console.log();
     console.log(chalk.bold('  Limits:'));
     if (budget.totalLimit !== undefined) {
-      const pct = Math.min(100, (budget.totalSpent / budget.totalLimit) * 100);
+      const pct = budget.totalLimit <= 0 ? 100 : Math.min(100, (budget.totalSpent / budget.totalLimit) * 100);
       const bar = createProgressBar(pct);
       printKeyValue('Total limit', `$${budget.totalLimit} ${bar} ${pct.toFixed(1)}%`, 'cyan');
       if (remaining.total !== undefined) {
@@ -52,7 +53,7 @@ export async function runBudgetStatus(): Promise<void> {
       }
     }
     if (budget.monthlyLimit !== undefined) {
-      const pct = Math.min(100, (budget.monthlySpent / budget.monthlyLimit) * 100);
+      const pct = budget.monthlyLimit <= 0 ? 100 : Math.min(100, (budget.monthlySpent / budget.monthlyLimit) * 100);
       const bar = createProgressBar(pct);
       printKeyValue('Monthly limit', `$${budget.monthlyLimit} ${bar} ${pct.toFixed(1)}%`, 'cyan');
       if (remaining.monthly !== undefined) {
@@ -122,6 +123,15 @@ export async function runBudgetAlert(amount: string): Promise<void> {
 
   setAlertThreshold(value);
   showSuccess(`Budget alert threshold set to $${value}`);
+}
+
+export async function runBudgetUnset(options: { total?: boolean; monthly?: boolean; alert?: boolean; all?: boolean }): Promise<void> {
+  const cleared = unsetLimits(options);
+  if (cleared.length === 0) {
+    showError('Choose a limit to clear: --total, --monthly, --alert, or --all');
+    return;
+  }
+  showSuccess(`Cleared: ${cleared.join(', ')}`);
 }
 
 function createProgressBar(percentage: number, width = 15): string {

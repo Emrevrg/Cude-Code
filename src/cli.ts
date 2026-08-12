@@ -169,6 +169,18 @@ export function createCLI(): Command {
       await runBudgetAlert(amount);
     });
 
+  budgetCmd
+    .command('unset')
+    .description('Remove one or more budget limits')
+    .option('--total', 'Clear the total limit')
+    .option('--monthly', 'Clear the monthly limit')
+    .option('--alert', 'Clear the alert threshold')
+    .option('--all', 'Clear all limits')
+    .action(async (options: { total?: boolean; monthly?: boolean; alert?: boolean; all?: boolean }) => {
+      const { runBudgetUnset } = await import('./commands/budget.js');
+      await runBudgetUnset(options);
+    });
+
   // ─── SESSIONS COMMAND ─────────────────────────────────────────────────────
   const sessionsCmd = program
     .command('sessions')
