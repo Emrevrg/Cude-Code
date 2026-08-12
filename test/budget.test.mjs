@@ -9,7 +9,7 @@ import { join } from 'node:path';
 const home = mkdtempSync(join(tmpdir(), 'cude-home-'));
 process.env.CUDE_HOME = home;
 
-const { runBudgetUnset } = await import('../dist/commands/budget.js');
+const { runBudgetUnset, runBudgetStatus, usedPercentage } = await import('../dist/commands/budget.js');
 const { loadBudget, setTotalLimit, setMonthlyLimit, setAlertThreshold, resetSpending } =
   await import('../dist/storage/budget.js');
 
@@ -69,5 +69,26 @@ describe('F7: a budget limit can be removed', () => {
     setTotalLimit(10);
     resetSpending();
     assert.equal(loadBudget().totalLimit, 10);
+  });
+});
+
+describe('F8: budget status never prints NaN', () => {
+  test('F8: a limit of 0 renders a percentage, not NaN', async () => {
+    setTotalLimit(0);
+    setMonthlyLimit(0);
+
+    const output = await capture(() => runBudgetStatus());
+
+    assert.doesNotMatch(output, /NaN/, 'budget status rendered NaN');
+    assert.match(output, /Total limit/);
+    assert.match(output, /Monthly limit/);
+  });
+
+  test('F8: usedPercentage treats a non-positive limit as fully used', () => {
+    assert.equal(usedPercentage(0, 0), 100);
+    assert.equal(usedPercentage(5, 0), 100);
+    assert.equal(usedPercentage(0, 10), 0);
+    assert.equal(usedPercentage(5, 10), 50);
+    assert.equal(usedPercentage(50, 10), 100, 'overspend is capped at 100%');
   });
 });

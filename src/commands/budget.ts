@@ -45,7 +45,7 @@ export async function runBudgetStatus(): Promise<void> {
     console.log();
     console.log(chalk.bold('  Limits:'));
     if (budget.totalLimit !== undefined) {
-      const pct = Math.min(100, (budget.totalSpent / budget.totalLimit) * 100);
+      const pct = usedPercentage(budget.totalSpent, budget.totalLimit);
       const bar = createProgressBar(pct);
       printKeyValue('Total limit', `$${budget.totalLimit} ${bar} ${pct.toFixed(1)}%`, 'cyan');
       if (remaining.total !== undefined) {
@@ -53,7 +53,7 @@ export async function runBudgetStatus(): Promise<void> {
       }
     }
     if (budget.monthlyLimit !== undefined) {
-      const pct = Math.min(100, (budget.monthlySpent / budget.monthlyLimit) * 100);
+      const pct = usedPercentage(budget.monthlySpent, budget.monthlyLimit);
       const bar = createProgressBar(pct);
       printKeyValue('Monthly limit', `$${budget.monthlyLimit} ${bar} ${pct.toFixed(1)}%`, 'cyan');
       if (remaining.monthly !== undefined) {
@@ -163,6 +163,15 @@ export async function runBudgetAlert(amount: string): Promise<void> {
 
   setAlertThreshold(value);
   showSuccess(`Budget alert threshold set to $${value}`);
+}
+
+/**
+ * A limit of 0 made `spent / limit` produce NaN, rendering "$0  NaN%".
+ * Nothing is left of a zero budget, so it reads as fully used.
+ */
+export function usedPercentage(spent: number, limit: number): number {
+  if (!Number.isFinite(limit) || limit <= 0) return 100;
+  return Math.min(100, (spent / limit) * 100);
 }
 
 function createProgressBar(percentage: number, width = 15): string {
