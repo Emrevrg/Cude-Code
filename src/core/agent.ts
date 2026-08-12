@@ -1,11 +1,13 @@
 import chalk from 'chalk';
 import { selectProviderAndModel, type TaskType } from './selector.js';
-import { executeTool, TOOL_DEFINITIONS, setConfirmCallback, formatToolCall, formatToolResult } from './tools.js';
+import { executeTool, setConfirmCallback, formatToolCall, formatToolResult } from './tools.js';
 import { recordSpending } from '../storage/budget.js';
 import { checkBudgetAlert } from '../storage/budget.js';
 import type { Message } from '../providers/types.js';
 import { validateTurnSequence } from '../providers/wire.js';
 import { MODELS } from '../config/models.js';
+import { getMode, toolsForMode, checkToolCall, DEFAULT_MODE, type AgentMode } from './modes.js';
+import { buildRulesPrompt } from './rules.js';
 
 export interface AgentOptions {
   task: string;
@@ -14,6 +16,8 @@ export interface AgentOptions {
   provider?: string;
   model?: string;
   maxIterations?: number;
+  /** Agent mode: code | architect | ask | debug | orchestrator. */
+  mode?: string;
   verbose?: boolean;
   onProgress?: (step: string) => void;
   onConfirm?: (message: string) => Promise<boolean>;
@@ -133,6 +137,13 @@ Important guidelines:
 
 When you have completed the task, start your final response with "TASK COMPLETE:" followed by a summary.`;
 
+/**
+ * Base prompt + the mode's own instructions + any rules the repository carries.
+ */
+export function buildSystemPrompt(mode: AgentMode): string {
+  return `${AGENT_SYSTEM_PROMPT}\n\n${mode.systemPrompt}${buildRulesPrompt()}`;
+}
+
 export async function runAgent(options: AgentOptions): Promise<AgentResult> {
   const {
     taskType = 'code',
@@ -143,6 +154,8 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
     verbose = false,
     onConfirm,
   } = options;
+
+  const mode = getMode(options.mode ?? DEFAULT_MODE);
 
   if (onConfirm) {
     setConfirmCallback(onConfirm);
@@ -156,26 +169,30 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
 
   if (verbose) {
     console.log(chalk.dim(`  Using ${provider.displayName} / ${model} (${reason})`));
+    console.log(chalk.dim(`  Mode: ${mode.displayName} — ${mode.description}`));
   }
 
   if (!provider.supportsTools() && provider.name !== 'ollama') {
     // For providers without native tool support, use ReAct-style prompting
-    return runReActAgent(provider, model, options, maxIterations);
+    return runReActAgent(provider, model, options, maxIterations, mode);
   }
 
   if (provider.supportsTools() && provider.chatWithTools) {
-    return runToolsAgent(provider, model, options, maxIterations);
+    return runToolsAgent(provider, model, options, maxIterations, mode);
   }
 
-  return runReActAgent(provider, model, options, maxIterations);
+  return runReActAgent(provider, model, options, maxIterations, mode);
 }
 
 async function runToolsAgent(
   provider: import('../providers/types.js').Provider,
   model: string,
   options: AgentOptions,
-  maxIterations: number
+  maxIterations: number,
+  mode: AgentMode
 ): Promise<AgentResult> {
+  const systemPrompt = buildSystemPrompt(mode);
+  const tools = toolsForMode(mode);
   const messages: Message[] = [
     { role: 'user', content: options.task },
   ];
@@ -217,8 +234,8 @@ async function runToolsAgent(
     const { response, toolCalls } = await provider.chatWithTools!(
       messages,
       model,
-      TOOL_DEFINITIONS,
-      { systemPrompt: AGENT_SYSTEM_PROMPT, maxTokens: 4096 }
+      tools,
+      { systemPrompt, maxTokens: 4096 }
     );
 
     totalCost += response.cost;
@@ -264,7 +281,12 @@ async function runToolsAgent(
         toolArgs: toolCall.arguments,
       });
 
-      const result = await executeTool(toolCall.name, toolCall.arguments);
+      // Prompt-level restriction is not restriction; the mode's budget is
+      // enforced here too, not just by omitting the tool definition.
+      const refusal = checkToolCall(mode, toolCall.name, toolCall.arguments);
+      const result = refusal
+        ? { success: false, output: '', error: refusal }
+        : await executeTool(toolCall.name, toolCall.arguments);
 
       if (options.verbose) {
         console.log(formatToolResult(result));
@@ -308,13 +330,15 @@ async function runReActAgent(
   provider: import('../providers/types.js').Provider,
   model: string,
   options: AgentOptions,
-  maxIterations: number
+  maxIterations: number,
+  mode: AgentMode
 ): Promise<AgentResult> {
-  const toolDescriptions = TOOL_DEFINITIONS.map(t =>
+  const tools = toolsForMode(mode);
+  const toolDescriptions = tools.map(t =>
     `- ${t.name}: ${t.description}`
   ).join('\n');
 
-  const systemPrompt = `${AGENT_SYSTEM_PROMPT}
+  const systemPrompt = `${buildSystemPrompt(mode)}
 
 Available tools:
 ${toolDescriptions}
@@ -395,7 +419,10 @@ When done, start with "TASK COMPLETE:" to finish.`;
         console.log(formatToolCall(toolName, toolArgs));
       }
 
-      const result = await executeTool(toolName, toolArgs);
+      const refusal = checkToolCall(mode, toolName, toolArgs);
+      const result = refusal
+        ? { success: false, output: '', error: refusal }
+        : await executeTool(toolName, toolArgs);
 
       if (options.verbose) {
         console.log(formatToolResult(result));

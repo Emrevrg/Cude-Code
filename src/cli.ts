@@ -65,6 +65,7 @@ export function createCLI(): Command {
     .option('-v, --verbose', 'Show detailed execution steps')
     .option('-y, --yes', 'Skip confirmation prompt')
     .option('--max-iterations <n>', 'Maximum agent iterations (default: 10)', '10')
+    .option('--mode <name>', 'Agent mode: code|architect|ask|debug|orchestrator', 'code')
     .action(async (task: string, options: {
       provider?: string;
       model?: string;
@@ -73,6 +74,7 @@ export function createCLI(): Command {
       verbose?: boolean;
       yes?: boolean;
       maxIterations?: string;
+      mode?: string;
     }) => {
       const { runRun } = await import('./commands/run.js');
       await runRun(task, {
@@ -83,7 +85,38 @@ export function createCLI(): Command {
         verbose: options.verbose ?? false,
         yes: options.yes ?? false,
         maxIterations: parseInt(options.maxIterations ?? '10', 10),
+        mode: options.mode,
       });
+    });
+
+  // ─── MODES COMMAND ────────────────────────────────────────────────────────
+  const modesCmd = program
+    .command('modes')
+    .description('Agent modes: what the agent does, and what it may touch');
+
+  modesCmd
+    .command('list', { isDefault: true })
+    .description('List available agent modes')
+    .action(async () => {
+      const { runModesList } = await import('./commands/modes.js');
+      runModesList();
+    });
+
+  modesCmd
+    .command('show <name>')
+    .description('Show the system prompt and tool budget for a mode')
+    .action(async (name: string) => {
+      const { runModesShow } = await import('./commands/modes.js');
+      runModesShow(name);
+    });
+
+  // ─── RULES COMMAND ────────────────────────────────────────────────────────
+  program
+    .command('rules')
+    .description('Show the project rule files the agent will follow')
+    .action(async () => {
+      const { runRulesList } = await import('./commands/modes.js');
+      runRulesList();
     });
 
   // ─── CONFIG COMMAND ───────────────────────────────────────────────────────
