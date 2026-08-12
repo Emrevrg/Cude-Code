@@ -95,7 +95,7 @@ behaviour.
 - **Native RAG**: `rag_index`, `rag_search`, `rag_summary` for in-memory keyword-based search across local codebases
 - **22 agent tools** (up from 16): added 3 browser tools and 3 RAG tools
 - **Brand identity**: hexagonal C> mark rendered as quadrant block art in the
-  terminal, generated from `assets/cude-mark.svg` by `tools/generate-logo.mjs`
+  terminal, based on the canonical `assets/cude-mark.svg` geometry
   rather than hand-drawn, plus the SVG banner for GitHub
 
 ### Housekeeping

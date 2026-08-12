@@ -14,4 +14,7 @@ test('branding assets are present and README uses the supplied logo and poster',
   assert.ok(existsSync(poster) && statSync(poster).size > 0, 'canonical poster is missing');
   assert.match(readme, /assets\/cude-logo\.png/);
   assert.match(readme, /assets\/cude-poster\.png/);
+  assert.doesNotMatch(readme, /cude-banner\.svg|cude-cli\.png/);
+  assert.equal(existsSync(join(root, 'assets', 'cude-banner.svg')), false);
+  assert.equal(existsSync(join(root, 'assets', 'cude-cli.png')), false);
 });

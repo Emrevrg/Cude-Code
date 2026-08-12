@@ -58,7 +58,7 @@ and pull request.
 | `src/providers/` | One file per AI provider, all implementing `Provider` |
 | `src/config/` | Model catalog, pricing, stored settings |
 | `src/ui/` | Terminal rendering — banner, tables, spinners |
-| `tools/` | Repo tooling (regenerates the CLI logo and preview image) |
+| `tools/` | Repository inspection and asset tooling |
 
 ## Adding a provider
 
@@ -79,17 +79,14 @@ Add the definition to the relevant `*_TOOL_DEFINITIONS` array and handle it in
 
 ## Changing the brand mark
 
-Don't hand-edit the block art in `src/ui/display.ts`. It is generated from
-`assets/cude-mark.svg`:
+The CLI mark is derived from the canonical logo artwork in
+`assets/cude-logo.png`; `assets/cude-mark.svg` is its vector source. The
+committed terminal art lives in `src/ui/display.ts` so installed users do not
+need image tooling at runtime.
 
 ```bash
-node tools/generate-logo.mjs --write   # regenerate the terminal art
 npm run build
-node tools/generate-cli-preview.mjs    # regenerate assets/cude-cli.png
 ```
-
-The generator renders the SVG in a real browser, so it needs Chromium. It
-looks for one in this order:
 
 1. `CUDE_CHROME_PATH`, if you set it — use this to point at a browser you
    already have instead of downloading another;

@@ -6,10 +6,6 @@
   <img src="./assets/cude-logo.png" alt="Cude Code logo" width="240">
 </p>
 
-<p align="center">
-  <img src="./assets/cude-cli.png" alt="Cude Code running in the terminal" width="620">
-</p>
-
 # Cude Code - Professional AI Development CLI
 
 > A provider-agnostic, safety-first AI coding agent for the terminal.
