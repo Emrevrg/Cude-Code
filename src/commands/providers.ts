@@ -93,7 +93,9 @@ export async function runProvidersModels(providerFilter?: string): Promise<void>
     : allModels;
 
   if (filtered.length === 0) {
-    console.log(chalk.yellow(`  No models found for provider: ${providerFilter}`));
+    const selfHosted = ['vllm', 'gguf', 'litellm'].includes(providerFilter ?? '');
+    console.log(chalk.yellow(`  No catalog models found for provider: ${providerFilter}`));
+    if (selfHosted) console.log(chalk.dim('  Model names come from the running server; pass one with --model.'));
     return;
   }
 

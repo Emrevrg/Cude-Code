@@ -130,8 +130,9 @@ export function showProviderTable(providers: Array<{ provider: Provider; availab
     } else {
       status = chalk.dim('○ Not configured').padEnd(statusWidth + 9);
     }
-    const isFree = provider.name === 'groq' || provider.name === 'ollama';
-    const isLocal = provider.name === 'ollama';
+    const models = provider.listModels();
+    const isFree = models.length > 0 && models.every(m => m.free);
+    const isLocal = models.length > 0 && models.every(m => m.local);
     const freeLabel = isLocal ? chalk.cyan('Local') : isFree ? chalk.green('Free') : chalk.dim('Paid');
 
     console.log(chalk.white(name) + status + freeLabel);
