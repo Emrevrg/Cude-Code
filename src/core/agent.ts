@@ -5,6 +5,7 @@ import { recordSpending } from '../storage/budget.js';
 import { checkBudgetAlert } from '../storage/budget.js';
 import type { Message } from '../providers/types.js';
 import { validateTurnSequence } from '../providers/wire.js';
+import { MODELS } from '../config/models.js';
 
 export interface AgentOptions {
   task: string;
@@ -56,6 +57,26 @@ export function truncateToolOutput(output: string, limit: number): string {
     output.substring(0, limit) +
     `\n... [truncated, showed ${limit} of ${output.length} chars]`
   );
+}
+
+/** Providers that never bill: whatever they serve runs on your own hardware. */
+const LOCAL_PROVIDERS = new Set(['ollama', 'vllm', 'gguf']);
+
+/**
+ * Whether a run costs money. The budget gate used to run before every
+ * iteration regardless of provider, so a $0 limit — or a spent-out monthly cap
+ * — stopped local vLLM and Ollama agents dead even though they charge nothing.
+ */
+export function isFreeOrLocal(
+  provider: import('../providers/types.js').Provider,
+  model: string
+): boolean {
+  if (LOCAL_PROVIDERS.has(provider.name)) return true;
+  const catalogued = MODELS[model];
+  if (catalogued) return catalogued.free || catalogued.local;
+  const listed = provider.listModels().find(m => m.id === model);
+  if (listed) return listed.free || listed.local;
+  return false;
 }
 
 export const STOP_REASON_MESSAGES: Record<AgentStopReason, string> = {
@@ -168,15 +189,21 @@ async function runToolsAgent(
   let finalOutput = '';
   let stopReason: AgentStopReason = 'max_iterations';
 
+  // A free or local provider costs nothing, so a spending limit has no bearing
+  // on it — checking one only takes the agent away from someone at their cap.
+  const budgetApplies = !isFreeOrLocal(provider, model);
+
   while (iterations < maxIterations) {
     iterations++;
 
     // Check budget
-    const budgetCheck = checkBudgetAlert();
-    if (budgetCheck.exceeded) {
-      finalOutput = `Budget exceeded: ${budgetCheck.message}`;
-      stopReason = 'budget_exceeded';
-      break;
+    if (budgetApplies) {
+      const budgetCheck = checkBudgetAlert();
+      if (budgetCheck.exceeded) {
+        finalOutput = `Budget exceeded: ${budgetCheck.message}`;
+        stopReason = 'budget_exceeded';
+        break;
+      }
     }
 
     options.onProgress?.(`Step ${iterations}: Thinking...`);
@@ -312,14 +339,18 @@ When done, start with "TASK COMPLETE:" to finish.`;
   let finalOutput = '';
   let stopReason: AgentStopReason = 'max_iterations';
 
+  const budgetApplies = !isFreeOrLocal(provider, model);
+
   while (iterations < maxIterations) {
     iterations++;
 
-    const budgetCheck = checkBudgetAlert();
-    if (budgetCheck.exceeded) {
-      finalOutput = `Budget exceeded: ${budgetCheck.message}`;
-      stopReason = 'budget_exceeded';
-      break;
+    if (budgetApplies) {
+      const budgetCheck = checkBudgetAlert();
+      if (budgetCheck.exceeded) {
+        finalOutput = `Budget exceeded: ${budgetCheck.message}`;
+        stopReason = 'budget_exceeded';
+        break;
+      }
     }
 
     options.onProgress?.(`Step ${iterations}: Thinking...`);

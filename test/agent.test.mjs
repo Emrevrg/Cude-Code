@@ -97,6 +97,48 @@ describe('F1: the agent must not report success when it failed', () => {
   });
 });
 
+describe('F6: the budget gate does not block free or local providers', () => {
+  test('F6: a $0 limit does not stop a local vLLM run', async () => {
+    // Reproduced from the audit: `cude budget set 0` then a vLLM run returned
+    // "Budget exceeded: Total budget limit of $0 exceeded! Spent: $0.0000"
+    // after one iteration, even though vLLM hardcodes cost = 0.
+    setTotalLimit(0);
+    try {
+      const { result } = await runAgainstStub([{ content: 'TASK COMPLETE: done locally' }]);
+
+      assert.notEqual(result.stopReason, 'budget_exceeded');
+      assert.equal(result.success, true);
+      assert.equal(result.totalCost, 0);
+    } finally {
+      clearTotalLimit();
+    }
+  });
+
+  test('F6: a paid provider is still gated by the same limit', async () => {
+    setTotalLimit(0);
+    try {
+      const { result } = await runAgainstStub([{ content: 'TASK COMPLETE: done' }], {
+        provider: 'litellm',
+        model: 'gpt-4o',
+      });
+      assert.equal(result.stopReason, 'budget_exceeded');
+    } finally {
+      clearTotalLimit();
+    }
+  });
+
+  test('F6: local providers and free catalog models are classified as free', async () => {
+    const { isFreeOrLocal } = await import('../dist/core/agent.js');
+    const { getProvider } = await import('../dist/providers/index.js');
+
+    for (const name of ['vllm', 'ollama', 'gguf']) {
+      assert.equal(isFreeOrLocal(getProvider(name), 'anything'), true, `${name} should be free`);
+    }
+    assert.equal(isFreeOrLocal(getProvider('openai'), 'gpt-4o'), false);
+    assert.equal(isFreeOrLocal(getProvider('anthropic'), 'claude-sonnet-5'), false);
+  });
+});
+
 describe('F3: truncated tool output says so', () => {
   test('F3: oversized tool output carries an explicit truncation marker', async () => {
     // package-lock.json is comfortably over the limit. The old code cut at 500
