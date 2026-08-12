@@ -6,7 +6,7 @@ import { checkBudgetAlert } from '../storage/budget.js';
 import type { Message } from '../providers/types.js';
 import { validateTurnSequence } from '../providers/wire.js';
 import { MODELS } from '../config/models.js';
-import { formatProjectContext, loadProjectContext } from './context.js';
+import { formatProjectContext, formatProjectSkills, loadProjectContext, loadProjectSkills } from './context.js';
 
 export interface AgentOptions {
   task: string;
@@ -135,7 +135,7 @@ Important guidelines:
 When you have completed the task, start your final response with "TASK COMPLETE:" followed by a summary.`;
 
 function getAgentSystemPrompt(): string {
-  return AGENT_SYSTEM_PROMPT + formatProjectContext(loadProjectContext());
+  return AGENT_SYSTEM_PROMPT + formatProjectContext(loadProjectContext()) + formatProjectSkills(loadProjectSkills());
 }
 
 export async function runAgent(options: AgentOptions): Promise<AgentResult> {

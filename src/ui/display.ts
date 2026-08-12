@@ -12,7 +12,7 @@ marked.use(markedTerminal() as Parameters<typeof marked.use>[0]);
 // Cude Code brand mark: hexagon opened on the right (forming a "C"), a ">"
 // chevron inside, and the split notch at the bottom vertex — the same geometry
 // as assets/cude-mark.svg, with the supplied raster artwork as the visual reference.
-const LOGO_ART =
+const _LOGO_ART_LEGACY =
   '             ▗▄███▄▖\n' +
   '          ▄▟█████████▙▄\n' +
   '      ▗▄█████▀▘   ▝▀█████▄▖\n' +

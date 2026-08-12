@@ -14,6 +14,7 @@ export interface RunCommandOptions {
   verbose?: boolean;
   yes?: boolean; // Skip confirmation
   maxIterations?: number;
+  json?: boolean;
 }
 
 function formatStep(step: AgentStep): string {
@@ -50,6 +51,7 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
     verbose = false,
     yes = false,
     maxIterations = 10,
+    json = false,
   } = options;
 
   if (!task || task.trim().length === 0) {
@@ -64,17 +66,19 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
     preferredModel,
   });
 
-  console.log();
-  console.log(chalk.bold.cyan('  Cude Agent'));
+  if (!json) console.log();
+  if (!json) console.log(chalk.bold.cyan('  Cude Agent'));
   console.log(chalk.dim('  ─────────────────────────────────'));
-  console.log(chalk.dim('  Task:     ') + chalk.white(task));
-  console.log(chalk.dim('  Provider: ') + chalk.cyan(provider.displayName));
-  console.log(chalk.dim('  Model:    ') + chalk.cyan(model));
-  if (reason) console.log(chalk.dim(`  (${reason})`));
-  console.log();
+  if (!json) {
+    console.log(chalk.dim('  Task:     ') + chalk.white(task));
+    console.log(chalk.dim('  Provider: ') + chalk.cyan(provider.displayName));
+    console.log(chalk.dim('  Model:    ') + chalk.cyan(model));
+    if (reason) console.log(chalk.dim(`  (${reason})`));
+    console.log();
+  }
 
   // Ask for confirmation unless --yes flag
-  if (!yes) {
+  if (!yes && !json) {
     const confirmed = await getUserConfirmation('Proceed with this task?');
     if (!confirmed) {
       console.log(chalk.dim('\n  Task cancelled.\n'));
@@ -83,7 +87,7 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
     console.log();
   }
 
-  startSpinner('Starting agent...');
+  if (!json) startSpinner('Starting agent...');
   let stepCount = 0;
 
   try {
@@ -97,9 +101,10 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
       verbose,
       onProgress: (step) => {
         stepCount++;
-        updateSpinner(`${step} (${stepCount} steps)`);
+        if (!json) updateSpinner(`${step} (${stepCount} steps)`);
       },
       onConfirm: async (message) => {
+        if (json) return false;
         stopSpinner(false);
         const confirmed = await getUserConfirmation(message);
         if (confirmed) {
@@ -109,6 +114,11 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
       },
     });
 
+    if (json) {
+      process.stdout.write(JSON.stringify({ ...result, provider: provider.name, model }) + '\n');
+      if (!result.success) process.exitCode = 1;
+      return;
+    }
     stopSpinner(result.success, result.success ? 'Task completed!' : 'Task failed');
 
     console.log();

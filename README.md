@@ -18,11 +18,25 @@ status.
 cude run "inspect the project, fix the failing tests, and summarize the changes"
 ```
 
+For automation, use `--json --yes` to emit one machine-readable result:
+
+```bash
+cude run "run the tests and report failures" --yes --json
+```
+
+Create a read-only implementation plan before making changes:
+
+```bash
+cude plan "Add authentication to the API and cover it with tests"
+```
+
 Before an autonomous run, Cude Code automatically loads project instructions
 from `AGENTS.md`, `CLAUDE.md`, or `.cude-context.md` in the current directory
 and its parents. The closest `AGENTS.override.md` replaces the matching file.
 Use `cude context` to audit the active files. Context is capped and truncated
 safely so a large instruction file cannot consume the whole model window.
+Project skills can be placed at `.cude/skills/<name>/SKILL.md` or
+`.agents/skills/<name>/SKILL.md`.
 
 Mutating file tools are confined to the workspace root, destructive commands
 require confirmation, and failed or budget-exhausted runs exit with status 1.
@@ -178,6 +192,12 @@ cude sessions export <id> conversation.md
 
 # Delete session
 cude sessions delete <id>
+```
+
+Create an independent branch of a saved conversation with:
+
+```bash
+cude sessions fork <id> experiment
 ```
 
 ### Project Context

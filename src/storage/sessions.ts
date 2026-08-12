@@ -7,6 +7,7 @@ import type { Message } from '../providers/types.js';
 
 export interface Session {
   id: string;
+  parentId?: string;
   name: string;
   createdAt: string;
   updatedAt: string;
@@ -45,6 +46,21 @@ export function createSession(name: string, provider: string, model: string): Se
   };
   saveSession(session);
   return session;
+}
+
+/** Create an independent branch while preserving the source conversation. */
+export function forkSession(source: Session, name: string): Session {
+  const fork: Session = {
+    ...source,
+    id: uuidv4(),
+    parentId: source.id,
+    name,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    messages: source.messages.map(message => ({ ...message })),
+  };
+  saveSession(fork);
+  return fork;
 }
 
 export function saveSession(session: Session): void {

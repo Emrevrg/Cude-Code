@@ -6,6 +6,7 @@ import {
   loadSession,
   deleteSession,
   exportSessionToMarkdown,
+  forkSession,
 } from '../storage/sessions.js';
 import { showSuccess, showError, showInfo, showSessionTable } from '../ui/display.js';
 import { runChat } from './chat.js';
@@ -125,4 +126,19 @@ export async function runSessionsExport(idOrName: string, outputPath?: string): 
   writeFileSync(fullPath, markdown, 'utf-8');
   showSuccess(`Session exported to: ${fullPath}`);
   console.log(chalk.dim(`  ${session.messages.filter(m => m.role !== 'system').length} messages, $${session.totalCost.toFixed(6)} total cost`));
+}
+
+export async function runSessionsFork(idOrName: string, name: string): Promise<void> {
+  const sessions = listSessions();
+  const source = sessions.find(s =>
+    s.id === idOrName || s.id.startsWith(idOrName) || s.name.toLowerCase() === idOrName.toLowerCase()
+  );
+  if (!source) {
+    showError(`Session not found: ${idOrName}`);
+    process.exit(1);
+  }
+  const fork = forkSession(source, name);
+  showSuccess(`Session forked as "${fork.name}"`);
+  console.log(chalk.dim(`  New id: ${fork.id}`));
+  console.log(chalk.dim(`  Parent: ${source.id}`));
 }

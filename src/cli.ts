@@ -65,6 +65,7 @@ export function createCLI(): Command {
     .option('-v, --verbose', 'Show detailed execution steps')
     .option('-y, --yes', 'Skip confirmation prompt')
     .option('--max-iterations <n>', 'Maximum agent iterations (default: 10)', '10')
+    .option('--json', 'Print one machine-readable JSON result')
     .action(async (task: string, options: {
       provider?: string;
       model?: string;
@@ -73,6 +74,7 @@ export function createCLI(): Command {
       verbose?: boolean;
       yes?: boolean;
       maxIterations?: string;
+      json?: boolean;
     }) => {
       const { runRun } = await import('./commands/run.js');
       await runRun(task, {
@@ -83,6 +85,7 @@ export function createCLI(): Command {
         verbose: options.verbose ?? false,
         yes: options.yes ?? false,
         maxIterations: parseInt(options.maxIterations ?? '10', 10),
+        json: options.json ?? false,
       });
     });
 
@@ -227,6 +230,26 @@ export function createCLI(): Command {
       await runSessionsExport(id, output);
     });
 
+  program
+    .command('plan <task>')
+    .description('Create a read-only implementation plan without changing files')
+    .option('-p, --provider <name>', 'AI provider to use')
+    .option('-m, --model <name>', 'Model to use')
+    .option('--free', 'Use only free providers')
+    .option('--json', 'Print the plan as JSON')
+    .action(async (task: string, options: { provider?: string; model?: string; free?: boolean; json?: boolean }) => {
+      const { runPlan } = await import('./commands/plan.js');
+      await runPlan(task, options);
+    });
+
+  sessionsCmd
+    .command('fork <id> <name>')
+    .description('Create a new branch from an existing session')
+    .action(async (id: string, name: string) => {
+      const { runSessionsFork } = await import('./commands/sessions.js');
+      await runSessionsFork(id, name);
+    });
+
   // ─── PROVIDERS COMMAND ────────────────────────────────────────────────────
   const providersCmd = program
     .command('providers')
@@ -270,15 +293,18 @@ export function createCLI(): Command {
     .command('context')
     .description('Show project instruction files loaded by the agent')
     .action(async () => {
-      const { loadProjectContext } = await import('./core/context.js');
+      const { loadProjectContext, loadProjectSkills } = await import('./core/context.js');
       const files = loadProjectContext();
-      if (files.length === 0) {
+      const skills = loadProjectSkills();
+      if (files.length > 0) {
+        console.log('Project context files:');
+        for (const file of files) console.log(`- ${file.path}${file.truncated ? ' (truncated)' : ''}`);
+      } else {
         console.log('No AGENTS.md, CLAUDE.md, or .cude-context.md found.');
-        return;
       }
-      console.log('Project context files:');
-      for (const file of files) {
-        console.log(`- ${file.path}${file.truncated ? ' (truncated)' : ''}`);
+      if (skills.length > 0) {
+        console.log('Agent Skills:');
+        for (const skill of skills) console.log(`- ${skill.name}: ${skill.path}${skill.truncated ? ' (truncated)' : ''}`);
       }
     });
 

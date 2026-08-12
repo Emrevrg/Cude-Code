@@ -1,14 +1,19 @@
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync } from 'fs';
 import { dirname, join, parse, resolve } from 'path';
 
 const CONTEXT_NAMES = ['AGENTS.md', 'CLAUDE.md', '.cude-context.md'];
 const MAX_FILE_CHARS = 24_000;
 const MAX_TOTAL_CHARS = 60_000;
+const MAX_SKILL_CHARS = 40_000;
 
 export interface ContextFile {
   path: string;
   content: string;
   truncated: boolean;
+}
+
+export interface SkillFile extends ContextFile {
+  name: string;
 }
 
 function readContextFile(path: string): ContextFile | null {
@@ -54,5 +59,44 @@ export function formatProjectContext(files: ContextFile[]): string {
   if (files.length === 0) return '';
   return files.map(file =>
     `\n\n--- Project instructions: ${file.path}${file.truncated ? ' (truncated)' : ''} ---\n${file.content}`
+  ).join('');
+}
+
+/** Discover shared Agent Skills without executing them. The agent decides when
+ * a skill applies; the files are only included as instructions in its prompt. */
+export function loadProjectSkills(start = process.cwd()): SkillFile[] {
+  const skills: SkillFile[] = [];
+  let current = resolve(start);
+  let total = 0;
+  while (true) {
+    for (const base of [join(current, '.cude', 'skills'), join(current, '.agents', 'skills')]) {
+      if (!existsSync(base)) continue;
+      let entries: string[];
+      try { entries = readdirSync(base); } catch { continue; }
+      for (const entry of entries) {
+        if (total >= MAX_SKILL_CHARS) break;
+        const path = join(base, entry, 'SKILL.md');
+        const item = readContextFile(path);
+        if (!item) continue;
+        const remaining = MAX_SKILL_CHARS - total;
+        if (item.content.length > remaining) {
+          item.content = item.content.slice(0, remaining);
+          item.truncated = true;
+        }
+        skills.push({ ...item, name: entry });
+        total += item.content.length;
+      }
+    }
+    const parent = dirname(current);
+    if (parent === current || parse(current).root === current) break;
+    current = parent;
+  }
+  return skills.reverse();
+}
+
+export function formatProjectSkills(skills: SkillFile[]): string {
+  if (skills.length === 0) return '';
+  return skills.map(skill =>
+    `\n\n--- Agent Skill: ${skill.name} (${skill.path})${skill.truncated ? ' (truncated)' : ''} ---\n${skill.content}`
   ).join('');
 }
