@@ -35,6 +35,17 @@ export interface AgentStep {
   toolArgs?: Record<string, unknown>;
 }
 
+// How much of a tool's output is fed back to the model. Larger than the old
+// 500/1000 char limits so e.g. a `npm test` run is not silently cut at the
+// first assertion. Truncation appends an explicit marker (see F3).
+const TOOL_OUTPUT_LIMIT = 4000;
+const REACT_OUTPUT_LIMIT = 4000;
+
+function truncate(text: string, limit: number): string {
+  if (text.length <= limit) return text;
+  return text.substring(0, limit) + `\n... [truncated, showed ${limit} of ${text.length} chars]`;
+}
+
 const AGENT_SYSTEM_PROMPT = `You are an autonomous AI agent with access to 22 tools for completing tasks.
 You can read/write/modify files, execute commands, manage directories, automate browsers, and search local codebases with RAG.
 
@@ -178,7 +189,7 @@ async function runToolsAgent(
       });
 
       toolResults.push(
-        `Tool: ${toolCall.name}\nResult: ${result.success ? result.output.substring(0, 500) : `ERROR: ${result.error}`}`
+        `Tool: ${toolCall.name}\nResult: ${result.success ? truncate(result.output, TOOL_OUTPUT_LIMIT) : `ERROR: ${result.error}`}`
       );
     }
 
@@ -319,7 +330,7 @@ When done, start with "TASK COMPLETE:" to finish.`;
       }
 
       const resultText = result.success
-        ? result.output.substring(0, 1000)
+        ? truncate(result.output, REACT_OUTPUT_LIMIT)
         : `Error: ${result.error}`;
 
       steps.push({ type: 'tool_result', content: resultText });

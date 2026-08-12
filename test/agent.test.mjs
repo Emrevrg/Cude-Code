@@ -166,3 +166,49 @@ describe('F2 — tool results travel through the tool-call protocol', () => {
     }
   });
 });
+
+describe('F3 — tool output truncation is explicit', () => {
+  test('F3: oversized tool output carries a truncation marker showing N of M chars', async () => {
+    // read_file is a safe, deterministic way to produce a large result for the
+    // model without spawning processes. We generate a file much bigger than the
+    // 4000-char limit and ask the agent to read it. The server is scripted to
+    // call read_file then finish, so only one tool round-trip is needed.
+    const big = join(dir, 'big.txt');
+    const payload = 'X'.repeat(20000);
+    writeFileSync(big, payload);
+
+    const truncStub = await startStubServer([
+      { content: 'Reading the file.', tool_calls: [{ name: 'read_file', arguments: { path: big } }] },
+      'TASK COMPLETE: read it',
+    ]);
+    const prev = process.env[ENDPOINT_ENV];
+    process.env[ENDPOINT_ENV] = `http://127.0.0.1:${truncStub.port}`;
+    try {
+      const { resetSpending } = await import('../dist/storage/budget.js');
+      resetSpending();
+      const result = await runAgent({
+        task: 'read the file',
+        provider: 'vllm',
+        model: 'stub-model',
+        maxIterations: 2,
+      });
+      assert.equal(result.success, true, `unexpected failure: ${result.stopReason}`);
+
+      // The second request's history holds the role:tool reply with the result.
+      assert.ok(truncStub.requests.length >= 1, 'expected a request');
+      const withTool = [...truncStub.requests].reverse().find((r) =>
+        r.body.messages.some((m) => m.role === 'tool')
+      );
+      assert.ok(withTool, 'no request contained a tool result message');
+      const toolMsg = withTool.body.messages.find((m) => m.role === 'tool');
+      assert.match(
+        toolMsg.content,
+        /\[truncated, showed \d+ of 20000 chars\]/,
+        'truncation marker must name how much was shown vs. the full length'
+      );
+    } finally {
+      await truncStub.close();
+      process.env[ENDPOINT_ENV] = prev;
+    }
+  });
+});
