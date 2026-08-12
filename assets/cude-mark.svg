@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Cude Code logo">
   <title>Cude Code — canonical logo mark</title>
 
+  <desc>White C-shaped code mark with a chevron and split lower vertex.</desc>
   <g fill="none" stroke="#ffffff" stroke-width="42" stroke-linecap="round" stroke-linejoin="round">
     <!-- Hexagon opened on the right side: this forms the "C".
          Runs from the upper-right vertex counter-clockwise around to

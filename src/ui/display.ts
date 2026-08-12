@@ -60,9 +60,21 @@ const _CANONICAL_LOGO_ART =
   '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠻⢿⣿⣿⣿⣿⣿⣿⣿⠀⠀⣿⣿⣿⣿⠟⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\n' +
   '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀';
 
+// Plain ASCII fallback for terminals that cannot render the legacy block glyphs.
+// It follows the same open-C / chevron / split-vertex silhouette as the SVG.
+const CLI_LOGO_ART = [
+  '       /\\',
+  '      /  \\',
+  '     /    \\',
+  '    |  >    ',
+  '    |       ',
+  '     \\    /',
+  '      \\__/',
+].join('\n');
+
 export function showBanner(): void {
   const gradient = gradientString('#ffffff', '#c7d2fe', '#6366f1');
-  console.log(gradient(LOGO_ART));
+  console.log(gradient(CLI_LOGO_ART));
   console.log();
   console.log(
     '  ' +

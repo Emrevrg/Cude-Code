@@ -16,3 +16,11 @@ test('branding assets are present and README uses the poster', () => {
   assert.equal(existsSync(join(root, 'assets', 'cude-banner.svg')), false);
   assert.equal(existsSync(join(root, 'assets', 'cude-logo.png')), false);
 });
+
+test('CLI banner uses the portable canonical silhouette', () => {
+  const display = readFileSync(join(root, 'src', 'ui', 'display.ts'), 'utf8');
+  const svg = readFileSync(join(root, 'assets', 'cude-mark.svg'), 'utf8');
+  assert.match(display, /CLI_LOGO_ART/);
+  assert.match(display, /gradient\(CLI_LOGO_ART\)/);
+  assert.match(svg, /split lower vertex/);
+});
