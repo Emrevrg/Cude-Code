@@ -163,6 +163,18 @@ export function createCLI(): Command {
     });
 
   budgetCmd
+    .command('unset')
+    .description('Remove spending limits (reset only clears counters)')
+    .option('--total', 'Remove the total spending limit')
+    .option('--monthly', 'Remove the monthly spending limit')
+    .option('--alert', 'Remove the alert threshold')
+    .option('--all', 'Remove all limits and the alert threshold')
+    .action(async (options: { total?: boolean; monthly?: boolean; alert?: boolean; all?: boolean }) => {
+      const { runBudgetUnset } = await import('./commands/budget.js');
+      await runBudgetUnset(options);
+    });
+
+  budgetCmd
     .command('reset')
     .description('Reset spending counters (preserves limits)')
     .action(async () => {

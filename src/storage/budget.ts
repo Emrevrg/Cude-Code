@@ -125,6 +125,40 @@ export function setAlertThreshold(amount: number): void {
   saveBudget(budget);
 }
 
+/**
+ * Removing a limit used to require hand-editing ~/.cude/budget.json: `reset`
+ * only zeroes the counters and deliberately preserves the limits.
+ */
+export function unsetLimits(
+  which: { total?: boolean; monthly?: boolean; alert?: boolean }
+): { total: boolean; monthly: boolean; alert: boolean } {
+  const budget = loadBudget();
+  const cleared = {
+    total: which.total === true && budget.totalLimit !== undefined,
+    monthly: which.monthly === true && budget.monthlyLimit !== undefined,
+    alert: which.alert === true && budget.alertThreshold !== undefined,
+  };
+
+  if (which.total) delete budget.totalLimit;
+  if (which.monthly) delete budget.monthlyLimit;
+  if (which.alert) delete budget.alertThreshold;
+
+  saveBudget(budget);
+  return cleared;
+}
+
+export function unsetTotalLimit(): void {
+  unsetLimits({ total: true });
+}
+
+export function unsetMonthlyLimit(): void {
+  unsetLimits({ monthly: true });
+}
+
+export function unsetAlertThreshold(): void {
+  unsetLimits({ alert: true });
+}
+
 export function resetSpending(): void {
   const budget = loadBudget();
   budget.totalSpent = 0;

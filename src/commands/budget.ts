@@ -6,6 +6,7 @@ import {
   setAlertThreshold,
   resetSpending,
   getRemainingBudget,
+  unsetLimits,
 } from '../storage/budget.js';
 import { showSuccess, showInfo, showError, printKeyValue, printSeparator } from '../ui/display.js';
 import { format } from 'date-fns';
@@ -111,6 +112,46 @@ export async function runBudgetReset(): Promise<void> {
   } else {
     showInfo('Reset cancelled');
   }
+}
+
+export interface BudgetUnsetOptions {
+  total?: boolean;
+  monthly?: boolean;
+  alert?: boolean;
+  all?: boolean;
+}
+
+export async function runBudgetUnset(options: BudgetUnsetOptions = {}): Promise<void> {
+  const { all = false } = options;
+  const which = {
+    total: all || options.total === true,
+    monthly: all || options.monthly === true,
+    alert: all || options.alert === true,
+  };
+
+  if (!which.total && !which.monthly && !which.alert) {
+    showError(
+      'Nothing to unset. Choose what to clear:\n' +
+      '  cude budget unset --total     Remove the total spending limit\n' +
+      '  cude budget unset --monthly   Remove the monthly limit\n' +
+      '  cude budget unset --alert     Remove the alert threshold\n' +
+      '  cude budget unset --all       Remove all three'
+    );
+    process.exit(1);
+  }
+
+  const cleared = unsetLimits(which);
+  const names: string[] = [];
+  if (cleared.total) names.push('total limit');
+  if (cleared.monthly) names.push('monthly limit');
+  if (cleared.alert) names.push('alert threshold');
+
+  if (names.length === 0) {
+    showInfo('Nothing to clear — none of the selected limits were set.');
+    return;
+  }
+
+  showSuccess(`Cleared: ${names.join(', ')}`);
 }
 
 export async function runBudgetAlert(amount: string): Promise<void> {
