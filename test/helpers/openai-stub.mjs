@@ -72,7 +72,7 @@ export async function startStubServer(script) {
       } catch {
         body = { _unparseable: raw };
       }
-      requests.push({ url: req.url, body });
+      requests.push({ url: req.url, body, headers: req.headers });
 
       const index = turn++;
       const spec = typeof script === 'function'
