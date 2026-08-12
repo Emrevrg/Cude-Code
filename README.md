@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/cude-logo.png" alt="Cude Code logo" width="240">
+  <img src="./assets/cude-cli.png" alt="Cude Code CLI running with the canonical logo" width="900">
 </p>
 
 # Cude Code - Professional AI Development CLI

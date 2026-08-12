@@ -31,9 +31,9 @@ const LOGO_ART =
   '           ▝▀███ ███▀▘\n' +
   '             ▜█▛ ▜█▛';
 
-// High-fidelity terminal rendering derived from assets/cude-logo.png. Braille
-// cells preserve the supplied mark's contour better than the older quadrant
-// approximation above, while remaining copy/paste-safe text output.
+// A higher-resolution reference rendering retained for visual comparison;
+// showBanner uses the compact vector-derived LOGO_ART above for reliable CLI
+// width across terminals.
 const CANONICAL_LOGO_ART =
   '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\n' +
   '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\n' +
@@ -62,7 +62,7 @@ const CANONICAL_LOGO_ART =
 
 export function showBanner(): void {
   const gradient = gradientString('#ffffff', '#c7d2fe', '#6366f1');
-  console.log(gradient(CANONICAL_LOGO_ART));
+  console.log(gradient(LOGO_ART));
   console.log();
   console.log(
     '  ' +

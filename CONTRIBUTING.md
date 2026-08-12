@@ -80,7 +80,7 @@ Add the definition to the relevant `*_TOOL_DEFINITIONS` array and handle it in
 ## Changing the brand mark
 
 The CLI mark is derived from the canonical logo artwork in
-`assets/cude-logo.png`; `assets/cude-mark.svg` is its vector source. The
+`assets/cude-mark.svg`. The
 committed terminal art lives in `src/ui/display.ts` so installed users do not
 need image tooling at runtime.
 
