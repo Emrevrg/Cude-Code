@@ -17,14 +17,54 @@ export interface AgentOptions {
   onConfirm?: (message: string) => Promise<boolean>;
 }
 
+/**
+ * Why the loop stopped. `completed` is the only reason that can produce
+ * `success: true` — every other value means the agent was cut short and the
+ * caller must treat the run as a failure.
+ */
+export type AgentStopReason =
+  | 'completed'
+  | 'max_iterations'
+  | 'budget_exceeded'
+  | 'empty_output';
+
 export interface AgentResult {
   success: boolean;
+  stopReason: AgentStopReason;
   output: string;
   totalCost: number;
   totalInputTokens: number;
   totalOutputTokens: number;
   iterations: number;
   steps: AgentStep[];
+}
+
+export const STOP_REASON_MESSAGES: Record<AgentStopReason, string> = {
+  completed: 'The model finished the task.',
+  max_iterations: 'Hit the iteration limit before the model finished. Raise --max-iterations or narrow the task.',
+  budget_exceeded: 'Stopped by the spending limit. Raise it with "cude budget set" or clear it with "cude budget unset --all".',
+  empty_output: 'The model stopped without producing any output.',
+};
+
+/**
+ * A run only succeeded if the model itself decided it was done *and* it left
+ * something behind. Returning `success: true` for an exhausted loop made
+ * failure indistinguishable from success in CI.
+ */
+function finalize(
+  stopReason: AgentStopReason,
+  output: string,
+  rest: Omit<AgentResult, 'success' | 'stopReason' | 'output'>
+): AgentResult {
+  const trimmed = output.trim();
+  const reason: AgentStopReason =
+    stopReason === 'completed' && trimmed.length === 0 ? 'empty_output' : stopReason;
+  return {
+    success: reason === 'completed',
+    stopReason: reason,
+    output,
+    ...rest,
+  };
 }
 
 export interface AgentStep {
@@ -107,6 +147,7 @@ async function runToolsAgent(
   let iterations = 0;
   const steps: AgentStep[] = [];
   let finalOutput = '';
+  let stopReason: AgentStopReason = 'max_iterations';
 
   while (iterations < maxIterations) {
     iterations++;
@@ -115,6 +156,7 @@ async function runToolsAgent(
     const budgetCheck = checkBudgetAlert();
     if (budgetCheck.exceeded) {
       finalOutput = `Budget exceeded: ${budgetCheck.message}`;
+      stopReason = 'budget_exceeded';
       break;
     }
 
@@ -143,6 +185,7 @@ async function runToolsAgent(
     // If no tool calls, we're done
     if (toolCalls.length === 0) {
       finalOutput = response.content;
+      stopReason = 'completed';
       break;
     }
 
@@ -187,21 +230,20 @@ async function runToolsAgent(
     // Check if task is complete
     if (response.content.includes('TASK COMPLETE:') || response.content.includes('Task complete:')) {
       finalOutput = response.content;
+      stopReason = 'completed';
       break;
     }
   }
 
   steps.push({ type: 'final', content: finalOutput });
 
-  return {
-    success: true,
-    output: finalOutput,
+  return finalize(stopReason, finalOutput, {
     totalCost,
     totalInputTokens,
     totalOutputTokens,
     iterations,
     steps,
-  };
+  });
 }
 
 async function runReActAgent(
@@ -236,6 +278,7 @@ When done, start with "TASK COMPLETE:" to finish.`;
   let iterations = 0;
   const steps: AgentStep[] = [];
   let finalOutput = '';
+  let stopReason: AgentStopReason = 'max_iterations';
 
   while (iterations < maxIterations) {
     iterations++;
@@ -243,6 +286,7 @@ When done, start with "TASK COMPLETE:" to finish.`;
     const budgetCheck = checkBudgetAlert();
     if (budgetCheck.exceeded) {
       finalOutput = `Budget exceeded: ${budgetCheck.message}`;
+      stopReason = 'budget_exceeded';
       break;
     }
 
@@ -310,8 +354,12 @@ When done, start with "TASK COMPLETE:" to finish.`;
       // No tool call - either thinking or final
       steps.push({ type: 'thought', content });
 
-      if (content.includes('TASK COMPLETE:') || content.includes('Task complete:') || iterations >= maxIterations - 1) {
+      // Running out of iterations is not the same as finishing: the old
+      // `iterations >= maxIterations - 1` clause here reported an exhausted
+      // loop as a completed task.
+      if (content.includes('TASK COMPLETE:') || content.includes('Task complete:')) {
         finalOutput = content;
+        stopReason = 'completed';
         messages.push({ role: 'assistant', content });
         break;
       }
@@ -322,18 +370,18 @@ When done, start with "TASK COMPLETE:" to finish.`;
   }
 
   if (!finalOutput) {
-    finalOutput = messages[messages.length - 1]?.content ?? 'Task completed';
+    // Surface whatever the model last said so the caller has something to show,
+    // but leave stopReason alone — this is not a completed run.
+    finalOutput = messages[messages.length - 1]?.content ?? '';
   }
 
   steps.push({ type: 'final', content: finalOutput });
 
-  return {
-    success: true,
-    output: finalOutput,
+  return finalize(stopReason, finalOutput, {
     totalCost,
     totalInputTokens,
     totalOutputTokens,
     iterations,
     steps,
-  };
+  });
 }

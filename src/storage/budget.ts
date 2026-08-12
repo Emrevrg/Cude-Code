@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
 import { startOfMonth } from 'date-fns';
+import { getDataDir } from '../config/index.js';
 
 export interface BudgetData {
   totalLimit?: number;
@@ -26,7 +26,7 @@ export interface SpendingRecord {
 }
 
 function getBudgetPath(): string {
-  const dir = join(homedir(), '.cude');
+  const dir = getDataDir();
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }

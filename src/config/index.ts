@@ -1,6 +1,6 @@
 import Conf from 'conf';
 import { homedir } from 'os';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { existsSync, renameSync, copyFileSync, readdirSync } from 'fs';
 
 export interface AppConfig {
@@ -28,13 +28,24 @@ const defaultConfig: AppConfig = {
   firstRun: true,
 };
 
-const DATA_DIR = join(homedir(), '.cude');
+/**
+ * Everything Cude persists lives here. `CUDE_HOME` redirects it, which is what
+ * lets the test suite exercise config- and budget-backed behaviour without
+ * writing to (or destroying) the real ~/.cude.
+ */
+export function getDataDir(): string {
+  const override = process.env.CUDE_HOME;
+  if (override && override.trim()) return resolve(override.trim());
+  return join(homedir(), '.cude');
+}
+
 const LEGACY_DATA_DIR = join(homedir(), '.codiente');
 
 // One-time migration from the legacy ~/.codiente directory to ~/.cude.
 // Idempotent: if the legacy dir no longer exists, this is a no-op.
 function migrateLegacyDataDir(): void {
   if (!existsSync(LEGACY_DATA_DIR)) return;
+  const DATA_DIR = getDataDir();
   if (!existsSync(DATA_DIR)) {
     // Whole-sale rename is the simplest path when the new dir doesn't exist yet.
     try {
@@ -71,7 +82,7 @@ export function getConfig(): Conf<AppConfig> {
     configInstance = new Conf<AppConfig>({
       projectName: 'cude-code',
       defaults: defaultConfig,
-      cwd: DATA_DIR,
+      cwd: getDataDir(),
     });
   }
   return configInstance;
@@ -159,5 +170,5 @@ export function markFirstRunDone(): void {
 }
 
 export function getConfigPath(): string {
-  return join(homedir(), '.cude');
+  return getDataDir();
 }
