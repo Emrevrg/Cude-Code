@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="./assets/cude-banner.svg" alt="Cude Code — YAZ. ANLA. ÜRET." width="900">
+  <img src="./assets/cude-poster.png" alt="Cude Code — YAZ. ANLA. ÜRET. poster" width="1200">
+</p>
+
+<p align="center">
+  <img src="./assets/cude-logo.png" alt="Cude Code logo" width="240">
 </p>
 
 <p align="center">
