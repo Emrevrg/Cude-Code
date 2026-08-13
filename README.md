@@ -38,6 +38,18 @@ cude doctor
 cude doctor --json
 ```
 
+Real language-server diagnostics and isolated parallel workers are available
+when the corresponding tools are installed:
+
+```bash
+cude lsp diagnostics src/index.ts
+cude task --task "Review the API" --task "Review the tests"
+```
+
+Each worker receives its own detached Git worktree under `.cude/worktrees/`;
+changes are never merged automatically. This keeps parallel agent work
+reviewable and prevents workers from silently overwriting one another.
+
 `doctor` detects installed LSP servers, debuggers, and optional `omp`/`pi`
 bridges. Cude Code does not silently claim LSP or DAP support when the required
 server is absent.

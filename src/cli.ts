@@ -271,6 +271,26 @@ export function createCLI(): Command {
       await runSessionsFork(id, name);
     });
 
+  const lspCmd = program.command('lsp').description('Use installed Language Server Protocol tools');
+  lspCmd.command('diagnostics <file>')
+    .description('Request real diagnostics from a language server')
+    .option('--server <command>', 'LSP server executable')
+    .option('--args <args>', 'Space-separated server arguments')
+    .option('--json', 'Print diagnostics as JSON')
+    .action(async (file: string, options: { server?: string; args?: string; json?: boolean }) => {
+      const { runLspDiagnostics } = await import('./commands/lsp.js');
+      await runLspDiagnostics(file, options);
+    });
+
+  program.command('task')
+    .description('Run multiple tasks concurrently in isolated git worktrees')
+    .requiredOption('--task <task>', 'Worker task; repeat this option for parallel workers', (value: string, previous: string[]) => [...(previous ?? []), value], [])
+    .option('--json', 'Print worker results as JSON')
+    .action(async (options: { task: string[]; json?: boolean }) => {
+      const { runTaskWorkers } = await import('./commands/task.js');
+      await runTaskWorkers(options.task, options.json ?? false);
+    });
+
   // ─── PROVIDERS COMMAND ────────────────────────────────────────────────────
   const providersCmd = program
     .command('providers')
