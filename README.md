@@ -50,6 +50,16 @@ Each worker receives its own detached Git worktree under `.cude/worktrees/`;
 changes are never merged automatically. This keeps parallel agent work
 reviewable and prevents workers from silently overwriting one another.
 
+Project memory is explicit and local. Save durable decisions or workflow notes
+with `cude memory add`; entries are stored as JSONL in `.cude/memory.jsonl` and
+included in the agent context on the next run. Use `cude memory list` to inspect
+them or pass a search term to filter. Nothing is captured automatically:
+
+```bash
+cude memory add "Use npm test for verification" --tags testing,workflow
+cude memory list testing
+```
+
 `doctor` detects installed LSP servers, debuggers, and optional `omp`/`pi`
 bridges. Cude Code does not silently claim LSP or DAP support when the required
 server is absent.
