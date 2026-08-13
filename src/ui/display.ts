@@ -60,16 +60,19 @@ const _CANONICAL_LOGO_ART =
   '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠻⢿⣿⣿⣿⣿⣿⣿⣿⠀⠀⣿⣿⣿⣿⠟⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\n' +
   '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀';
 
-// Plain ASCII fallback for terminals that cannot render the legacy block glyphs.
-// It follows the same open-C / chevron / split-vertex silhouette as the SVG.
+// Terminal-safe rendering of the canonical mark in assets/cude-mark.svg.
+// The SVG is the source artwork; this fallback keeps the same open-C,
+// chevron, and split lower vertex geometry without image tooling.
 const CLI_LOGO_ART = [
   '       /\\',
-  '      /  \\',
-  '     /    \\',
-  '    |  >    ',
-  '    |       ',
-  '     \\    /',
-  '      \\__/',
+  '      /  \\____',
+  '     /         ',
+  '    |    >     ',
+  '    |          ',
+  '     \\       /',
+  '      \\     / ',
+  '       \\   /  ',
+  '        | |   ',
 ].join('\n');
 
 export function showBanner(): void {
