@@ -8,12 +8,14 @@ import {
   saveSession,
   addMessageToSession,
   updateSessionCost,
+  addActivityToSession,
   listSessions,
 } from '../storage/sessions.js';
 import { recordSpending, checkBudgetAlert, loadBudget } from '../storage/budget.js';
 import { showBanner, showCostInfo, showError, showInfo, showSessionTable } from '../ui/display.js';
 import type { Message } from '../providers/types.js';
 import type { Session } from '../storage/sessions.js';
+import { activityEntry, formatActivity, summarizeActivity, type ActivityEntry } from '../core/activity.js';
 
 export interface ChatCommandOptions {
   provider?: string;
@@ -36,6 +38,8 @@ ${chalk.bold.cyan('Chat Commands:')}
   ${chalk.yellow('/save <name>')}   Save current session with a name
   ${chalk.yellow('/help')}          Show this help message
   ${chalk.yellow('/info')}          Show current session info
+  ${chalk.yellow('/summary')}       Show the observable activity summary
+  ${chalk.yellow('/activity')}      Show the latest activity events
 `;
 
 export async function runChat(options: ChatCommandOptions = {}): Promise<void> {
@@ -92,6 +96,14 @@ export async function runChat(options: ChatCommandOptions = {}): Promise<void> {
 
   // Maintain conversation history
   const messages: Message[] = session ? [...session.messages] : [];
+  const activity: ActivityEntry[] = session?.activity ? [...session.activity] : [];
+  const recordActivity = (entry: ActivityEntry) => {
+    activity.push(entry);
+    if (session) {
+      addActivityToSession(session, entry);
+      saveSession(session);
+    }
+  };
   if (systemPrompt) {
     messages.unshift({ role: 'system', content: systemPrompt });
   }
@@ -238,6 +250,20 @@ export async function runChat(options: ChatCommandOptions = {}): Promise<void> {
         continue;
       }
 
+      if (cmd === 'summary' || cmd === 'activity') {
+        const summary = summarizeActivity(activity);
+        console.log();
+        console.log(chalk.bold.cyan('  Observable Activity Summary'));
+        console.log(chalk.dim('  This records visible events, not private model reasoning or hidden chain-of-thought.'));
+        console.log(chalk.dim(`  Turns: ${summary.turns}  Model calls: ${summary.modelCalls}  Tools: ${summary.toolCalls}`));
+        console.log(chalk.dim(`  Approvals: ${summary.approvals}  Warnings: ${summary.warnings}  Errors: ${summary.errors}`));
+        console.log(chalk.dim(`  Cost: $${summary.totalCost.toFixed(6)}  Tokens: ${summary.inputTokens} in / ${summary.outputTokens} out`));
+        if (summary.lastAction) console.log(chalk.dim(`  Last observed action: ${summary.lastAction}`));
+        if (cmd === 'activity') console.log(`\n${formatActivity(activity)}`);
+        console.log();
+        continue;
+      }
+
       showError(`Unknown command: ${userInput}\nType /help for available commands`);
       continue;
     }
@@ -245,6 +271,7 @@ export async function runChat(options: ChatCommandOptions = {}): Promise<void> {
     // Regular chat message
     messages.push({ role: 'user', content: userInput });
     if (session) addMessageToSession(session, { role: 'user', content: userInput });
+    recordActivity(activityEntry('user', 'User turn', `turn ${activity.filter(entry => entry.kind === 'user').length + 1}`));
 
     // Check budget
     const budgetCheck = checkBudgetAlert();
@@ -276,6 +303,14 @@ export async function runChat(options: ChatCommandOptions = {}): Promise<void> {
         }
       );
 
+      recordActivity(activityEntry('model', 'Model response', 'Streaming response completed', {
+        provider: provider.name,
+        model,
+        cost: response.cost,
+        inputTokens: response.inputTokens,
+        outputTokens: response.outputTokens,
+      }));
+
       console.log('\n');
 
       // Show rendered markdown if the response contains markdown
@@ -302,6 +337,7 @@ export async function runChat(options: ChatCommandOptions = {}): Promise<void> {
       }
 
     } catch (err) {
+      recordActivity(activityEntry('error', 'Model request failed', err instanceof Error ? err.message.slice(0, 240) : String(err).slice(0, 240), { provider: provider.name, model }));
       console.log();
       showError(err instanceof Error ? err.message : String(err));
       // Remove the user message we just added on error

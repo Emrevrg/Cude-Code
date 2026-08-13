@@ -218,6 +218,11 @@ cude sessions fork <id> experiment
 cude context
 ```
 
+During a chat, use `/summary` for a compact audit of observable turns, model
+calls, tools, approvals, errors, token usage, and cost. Use `/activity` for
+the latest event list. The audit records what the application observed; it
+does not expose private model chain-of-thought or API credentials.
+
 ## Upstream design influences
 
 Cude Code keeps its TypeScript, provider-agnostic core while adopting useful

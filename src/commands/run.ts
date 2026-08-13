@@ -5,6 +5,7 @@ import { selectProviderAndModel, type TaskType } from '../core/selector.js';
 import { startSpinner, stopSpinner, updateSpinner } from '../ui/spinner.js';
 import { showError, showSuccess, showCostInfo, renderMarkdown } from '../ui/display.js';
 import type { AgentStep } from '../core/agent.js';
+import { formatActivity, summarizeActivity, activityFromAgentSteps } from '../core/activity.js';
 
 export interface RunCommandOptions {
   provider?: string;
@@ -129,6 +130,12 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
         const formatted = formatStep(step);
         if (formatted) console.log(formatted);
       }
+      console.log();
+      const activity = activityFromAgentSteps(result.steps);
+      const activitySummary = summarizeActivity(activity);
+      console.log(chalk.bold('  Observable Activity:'));
+      console.log(chalk.dim(`  Model calls: ${activitySummary.modelCalls}  Tools: ${activitySummary.toolCalls}`));
+      console.log(chalk.dim(formatActivity(activity)));
       console.log();
     }
 

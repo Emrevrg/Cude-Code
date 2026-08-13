@@ -4,6 +4,7 @@ import { homedir } from 'os';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
 import type { Message } from '../providers/types.js';
+import type { ActivityEntry } from '../core/activity.js';
 
 export interface Session {
   id: string;
@@ -17,6 +18,7 @@ export interface Session {
   totalCost: number;
   totalInputTokens: number;
   totalOutputTokens: number;
+  activity?: ActivityEntry[];
 }
 
 function getSessionsDir(): string {
@@ -43,6 +45,7 @@ export function createSession(name: string, provider: string, model: string): Se
     totalCost: 0,
     totalInputTokens: 0,
     totalOutputTokens: 0,
+    activity: [],
   };
   saveSession(session);
   return session;
@@ -58,6 +61,7 @@ export function forkSession(source: Session, name: string): Session {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     messages: source.messages.map(message => ({ ...message })),
+    activity: source.activity ? source.activity.map(entry => ({ ...entry })) : [],
   };
   saveSession(fork);
   return fork;
@@ -125,6 +129,11 @@ export function updateSessionCost(
   session.totalOutputTokens += outputTokens;
 }
 
+export function addActivityToSession(session: Session, entry: ActivityEntry): void {
+  if (!session.activity) session.activity = [];
+  session.activity.push(entry);
+}
+
 export function exportSessionToMarkdown(session: Session): string {
   const lines: string[] = [
     `# Session: ${session.name}`,
@@ -142,6 +151,15 @@ export function exportSessionToMarkdown(session: Session): string {
     `## Conversation`,
     ``,
   ];
+
+  if (session.activity?.length) {
+    lines.push('## Activity Summary', '', '```text');
+    lines.push(...session.activity.map(entry => {
+      const detail = entry.detail ? ` — ${entry.detail}` : '';
+      return `[${entry.kind}] ${entry.label}${detail}`;
+    }));
+    lines.push('```', '', '---', '');
+  }
 
   for (const msg of session.messages) {
     if (msg.role === 'system') continue;
