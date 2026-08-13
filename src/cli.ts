@@ -231,6 +231,48 @@ export function createCLI(): Command {
     });
 
   program
+    .command('write <task>')
+    .description('Yaz: implement a focused change in the workspace')
+    .option('-p, --provider <name>', 'AI provider to use')
+    .option('-m, --model <name>', 'Model to use')
+    .option('--free', 'Use only free providers')
+    .option('-v, --verbose', 'Show detailed execution steps')
+    .option('-y, --yes', 'Skip confirmation prompt')
+    .option('--max-iterations <n>', 'Maximum agent iterations', '10')
+    .option('--json', 'Print one machine-readable JSON result')
+    .action(async (task: string, options: { provider?: string; model?: string; free?: boolean; verbose?: boolean; yes?: boolean; maxIterations?: string; json?: boolean }) => {
+      const { runWrite } = await import('./commands/workflow.js');
+      await runWrite(task, { ...options, maxIterations: parseInt(options.maxIterations ?? '10', 10) });
+    });
+
+  program
+    .command('understand [target]')
+    .description('Anla: read-only architecture and risk summary for the project or target file')
+    .option('-p, --provider <name>', 'AI provider to use')
+    .option('-m, --model <name>', 'Model to use')
+    .option('--free', 'Use only free providers')
+    .option('--json', 'Print the summary as JSON')
+    .action(async (target: string | undefined, options: { provider?: string; model?: string; free?: boolean; json?: boolean }) => {
+      const { runUnderstand } = await import('./commands/workflow.js');
+      await runUnderstand(target, options);
+    });
+
+  program
+    .command('produce <task>')
+    .description('Üret: implement, verify, and review a complete change')
+    .option('-p, --provider <name>', 'AI provider to use')
+    .option('-m, --model <name>', 'Model to use')
+    .option('--free', 'Use only free providers')
+    .option('-v, --verbose', 'Show detailed execution steps')
+    .option('-y, --yes', 'Skip confirmation prompt')
+    .option('--max-iterations <n>', 'Maximum agent iterations', '10')
+    .option('--json', 'Print the agent result as JSON')
+    .action(async (task: string, options: { provider?: string; model?: string; free?: boolean; verbose?: boolean; yes?: boolean; maxIterations?: string; json?: boolean }) => {
+      const { runProduce } = await import('./commands/workflow.js');
+      await runProduce(task, { ...options, maxIterations: parseInt(options.maxIterations ?? '10', 10) });
+    });
+
+  program
     .command('plan <task>')
     .description('Create a read-only implementation plan without changing files')
     .option('-p, --provider <name>', 'AI provider to use')

@@ -58,7 +58,16 @@ them or pass a search term to filter. Nothing is captured automatically:
 ```bash
 cude memory add "Use npm test for verification" --tags testing,workflow
 cude memory list testing
+
+# Slogan-driven workflow
+cude write "Add request validation to the API"
+cude understand src/index.ts
+cude produce "Implement the feature and leave it tested and reviewed"
 ```
+
+The slogan is executable workflow, not decoration: `write` makes a focused
+change, `understand` gives a read-only architecture/risk summary, and `produce`
+implements the request, verifies it, then reviews the resulting diff.
 
 `doctor` detects installed LSP servers, debuggers, and optional `omp`/`pi`
 bridges. Cude Code does not silently claim LSP or DAP support when the required
