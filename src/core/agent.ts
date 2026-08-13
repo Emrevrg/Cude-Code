@@ -7,6 +7,7 @@ import type { Message } from '../providers/types.js';
 import { validateTurnSequence } from '../providers/wire.js';
 import { MODELS } from '../config/models.js';
 import { formatProjectContext, formatProjectSkills, loadProjectContext, loadProjectSkills } from './context.js';
+import { formatMemory, listMemory } from './memory.js';
 
 export interface AgentOptions {
   task: string;
@@ -135,7 +136,9 @@ Important guidelines:
 When you have completed the task, start your final response with "TASK COMPLETE:" followed by a summary.`;
 
 function getAgentSystemPrompt(): string {
-  return AGENT_SYSTEM_PROMPT + formatProjectContext(loadProjectContext()) + formatProjectSkills(loadProjectSkills());
+  const memory = formatMemory(listMemory());
+  return AGENT_SYSTEM_PROMPT + formatProjectContext(loadProjectContext()) + formatProjectSkills(loadProjectSkills()) +
+    (memory ? `\n\n--- Project memory ---${memory}` : '');
 }
 
 export async function runAgent(options: AgentOptions): Promise<AgentResult> {

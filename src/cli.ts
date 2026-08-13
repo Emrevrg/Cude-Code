@@ -291,6 +291,20 @@ export function createCLI(): Command {
       await runTaskWorkers(options.task, options.json ?? false);
     });
 
+  const memoryCmd = program.command('memory').description('Manage explicit project memories used by the agent');
+  memoryCmd.command('add <text>')
+    .description('Save a project fact or reusable lesson')
+    .option('--tags <tags>', 'Comma-separated tags')
+    .action(async (text: string, options: { tags?: string }) => {
+      const { runMemoryAdd } = await import('./commands/memory.js');
+      runMemoryAdd(text, options.tags);
+    });
+  memoryCmd.command('list [query]')
+    .description('List memories, optionally filtered by a search query')
+    .action((query?: string) => {
+      import('./commands/memory.js').then(({ runMemoryList }) => runMemoryList(query));
+    });
+
   // ─── PROVIDERS COMMAND ────────────────────────────────────────────────────
   const providersCmd = program
     .command('providers')
