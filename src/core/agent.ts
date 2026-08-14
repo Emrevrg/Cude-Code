@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { selectProviderAndModel, type TaskType } from './selector.js';
-import { executeTool, TOOL_DEFINITIONS, setConfirmCallback, formatToolCall, formatToolResult } from './tools.js';
+import { executeTool, getToolDefinitions, setConfirmCallback, formatToolCall, formatToolResult } from './tools.js';
 import { recordSpending } from '../storage/budget.js';
 import { checkBudgetAlert } from '../storage/budget.js';
 import type { Message } from '../providers/types.js';
@@ -185,6 +185,7 @@ async function runToolsAgent(
   options: AgentOptions,
   maxIterations: number
 ): Promise<AgentResult> {
+  const toolDefinitions = await getToolDefinitions();
   const messages: Message[] = [
     { role: 'user', content: options.task },
   ];
@@ -226,7 +227,7 @@ async function runToolsAgent(
     const { response, toolCalls } = await provider.chatWithTools!(
       messages,
       model,
-      TOOL_DEFINITIONS,
+      toolDefinitions,
       { systemPrompt: getAgentSystemPrompt(), maxTokens: 4096 }
     );
 
@@ -334,7 +335,8 @@ async function runReActAgent(
   options: AgentOptions,
   maxIterations: number
 ): Promise<AgentResult> {
-  const toolDescriptions = TOOL_DEFINITIONS.map(t =>
+  const toolDefinitions = await getToolDefinitions();
+  const toolDescriptions = toolDefinitions.map(t =>
     `- ${t.name}: ${t.description}`
   ).join('\n');
 

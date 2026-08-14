@@ -7,6 +7,7 @@ import { getWorkspaceRootSetting } from '../config/index.js';
 import type { ToolDefinition } from '../providers/types.js';
 import { BROWSER_TOOL_DEFINITIONS, executeBrowserTool } from './browser.js';
 import { RAG_TOOL_DEFINITIONS, executeRagTool } from './rag.js';
+import { callMcpTool, discoverMcpTools } from './mcp.js';
 
 const execAsync = promisify(exec);
 
@@ -301,6 +302,10 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...RAG_TOOL_DEFINITIONS,
 ];
 
+export async function getToolDefinitions(): Promise<ToolDefinition[]> {
+  return [...TOOL_DEFINITIONS, ...(await discoverMcpTools())];
+}
+
 // ─── Workspace boundary ─────────────────────────────────────────────────────
 //
 // Every mutating file tool used to resolve() its argument and act, with no
@@ -444,6 +449,7 @@ export async function executeTool(
   name: string,
   args: Record<string, unknown>
 ): Promise<ToolResult> {
+  if (name.startsWith('mcp__')) return callMcpTool(name, args);
   const missing = findMissingParams(name, args);
   if (missing.length > 0) {
     const def = TOOL_DEFINITIONS.find((d) => d.name === name);

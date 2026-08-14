@@ -65,6 +65,7 @@ cude understand src/index.ts
 cude produce "Implement the feature and leave it tested and reviewed"
 cude subagent list
 cude subagent run code-reviewer "Check the authentication changes" --json
+cude mcp list
 ```
 
 The slogan is executable workflow, not decoration: `write` makes a focused
@@ -95,6 +96,11 @@ hook blocks the tool call unless `allowFailure` is set. Hook commands receive
 Named subagents are Markdown files under `.cude/agents/`. Their frontmatter
 supports `name` and `description`; the Markdown body is the specialist prompt
 and is run in its own agent context.
+
+MCP servers are configured in `.cude/mcp.json` using the standard stdio
+transport. Discovered MCP tools are added to the agent automatically with names
+like `mcp__github__search`. Use `cude mcp list` to verify discovery and
+`cude mcp call <tool> '{"query":"..."}'` for a direct JSON call.
 
 `doctor` detects installed LSP servers, debuggers, and optional `omp`/`pi`
 bridges. Cude Code does not silently claim LSP or DAP support when the required

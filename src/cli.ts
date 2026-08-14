@@ -367,6 +367,24 @@ export function createCLI(): Command {
       await executeSubagent(name, task, options);
     });
 
+  const mcpCmd = program.command('mcp').description('Discover and call configured Model Context Protocol servers');
+  mcpCmd.command('list')
+    .description('List tools exposed by .cude/mcp.json servers')
+    .action(async () => {
+      const { discoverMcpTools } = await import('./core/mcp.js');
+      const tools = await discoverMcpTools();
+      if (tools.length === 0) console.log('No MCP tools discovered. Configure servers in .cude/mcp.json.');
+      for (const tool of tools) console.log(`${tool.name}  ${tool.description}`);
+    });
+  mcpCmd.command('call <tool> [args]')
+    .description('Call an MCP tool with a JSON argument object')
+    .action(async (tool: string, args?: string) => {
+      const { callMcpTool } = await import('./core/mcp.js');
+      const result = await callMcpTool(tool, args ? JSON.parse(args) as Record<string, unknown> : {});
+      process.stdout.write(JSON.stringify(result) + '\n');
+      if (!result.success) process.exitCode = 1;
+    });
+
   // ─── PROVIDERS COMMAND ────────────────────────────────────────────────────
   const providersCmd = program
     .command('providers')
