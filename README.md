@@ -63,11 +63,38 @@ cude memory list testing
 cude write "Add request validation to the API"
 cude understand src/index.ts
 cude produce "Implement the feature and leave it tested and reviewed"
+cude subagent list
+cude subagent run code-reviewer "Check the authentication changes" --json
 ```
 
 The slogan is executable workflow, not decoration: `write` makes a focused
 change, `understand` gives a read-only architecture/risk summary, and `produce`
 implements the request, verifies it, then reviews the resulting diff.
+
+### Hooks and subagents
+
+Hooks are configured in `.cude/hooks.json` and run at `session_start`,
+`pre_tool_use`, `post_tool_use`, or `session_end`. A failing `pre_tool_use`
+hook blocks the tool call unless `allowFailure` is set. Hook commands receive
+`CUDE_HOOK_EVENT`, `CUDE_TASK`, `CUDE_TOOL_NAME`, `CUDE_TOOL_ARGS`,
+`CUDE_TOOL_SUCCESS`, and `CUDE_TOOL_OUTPUT` environment variables.
+
+```json
+{
+  "hooks": {
+    "pre_tool_use": [
+      { "command": "node scripts/check-tool.js", "timeoutMs": 10000 }
+    ],
+    "post_tool_use": [
+      { "command": "npm run lint", "allowFailure": true }
+    ]
+  }
+}
+```
+
+Named subagents are Markdown files under `.cude/agents/`. Their frontmatter
+supports `name` and `description`; the Markdown body is the specialist prompt
+and is run in its own agent context.
 
 `doctor` detects installed LSP servers, debuggers, and optional `omp`/`pi`
 bridges. Cude Code does not silently claim LSP or DAP support when the required

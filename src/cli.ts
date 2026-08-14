@@ -347,6 +347,26 @@ export function createCLI(): Command {
       import('./commands/memory.js').then(({ runMemoryList }) => runMemoryList(query));
     });
 
+  const subagentCmd = program.command('subagent').description('Manage specialized project subagents');
+  subagentCmd.command('list')
+    .description('List subagents from .cude/agents')
+    .action(async () => {
+      const { listSubagents } = await import('./commands/subagent.js');
+      listSubagents();
+    });
+  subagentCmd.command('run <name> <task>')
+    .description('Run a named subagent with an isolated specialist prompt')
+    .option('-p, --provider <name>', 'AI provider to use')
+    .option('-m, --model <name>', 'Model to use')
+    .option('--free', 'Use only free providers')
+    .option('-v, --verbose', 'Show detailed execution steps')
+    .option('--max-iterations <n>', 'Maximum agent iterations', '10')
+    .option('--json', 'Print the result as JSON')
+    .action(async (name: string, task: string, options: { provider?: string; model?: string; free?: boolean; verbose?: boolean; maxIterations?: string; json?: boolean }) => {
+      const { executeSubagent } = await import('./commands/subagent.js');
+      await executeSubagent(name, task, options);
+    });
+
   // ─── PROVIDERS COMMAND ────────────────────────────────────────────────────
   const providersCmd = program
     .command('providers')

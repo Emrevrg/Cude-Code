@@ -8,6 +8,7 @@ import { validateTurnSequence } from '../providers/wire.js';
 import { MODELS } from '../config/models.js';
 import { formatProjectContext, formatProjectSkills, loadProjectContext, loadProjectSkills } from './context.js';
 import { formatMemory, listMemory } from './memory.js';
+import { runHooks } from './hooks.js';
 
 export interface AgentOptions {
   task: string;
@@ -161,6 +162,7 @@ export async function runAgent(options: AgentOptions): Promise<AgentResult> {
     preferredProvider,
     preferredModel,
   });
+  await runHooks('session_start', { task: options.task });
   if (verbose) {
     console.log(chalk.dim(`  Using ${provider.displayName} / ${model} (${reason})`));
   }
@@ -271,7 +273,21 @@ async function runToolsAgent(
         toolArgs: toolCall.arguments,
       });
 
-      const result = await executeTool(toolCall.name, toolCall.arguments);
+      const preHook = await runHooks('pre_tool_use', {
+        task: options.task,
+        toolName: toolCall.name,
+        toolArgs: toolCall.arguments,
+      });
+      const result = preHook.blocked
+        ? { success: false, output: '', error: `Blocked by pre_tool_use hook: ${preHook.output}` }
+        : await executeTool(toolCall.name, toolCall.arguments);
+      await runHooks('post_tool_use', {
+        task: options.task,
+        toolName: toolCall.name,
+        toolArgs: toolCall.arguments,
+        toolSuccess: result.success,
+        toolOutput: result.success ? result.output : result.error,
+      });
 
       if (options.verbose) {
         console.log(formatToolResult(result));
@@ -301,6 +317,7 @@ async function runToolsAgent(
   }
 
   steps.push({ type: 'final', content: finalOutput });
+  await runHooks('session_end', { task: options.task });
 
   return finalize(stopReason, finalOutput, {
     totalCost,
@@ -402,7 +419,21 @@ When done, start with "TASK COMPLETE:" to finish.`;
         console.log(formatToolCall(toolName, toolArgs));
       }
 
-      const result = await executeTool(toolName, toolArgs);
+      const preHook = await runHooks('pre_tool_use', {
+        task: options.task,
+        toolName,
+        toolArgs,
+      });
+      const result = preHook.blocked
+        ? { success: false, output: '', error: `Blocked by pre_tool_use hook: ${preHook.output}` }
+        : await executeTool(toolName, toolArgs);
+      await runHooks('post_tool_use', {
+        task: options.task,
+        toolName,
+        toolArgs,
+        toolSuccess: result.success,
+        toolOutput: result.success ? result.output : result.error,
+      });
 
       if (options.verbose) {
         console.log(formatToolResult(result));
@@ -445,6 +476,7 @@ When done, start with "TASK COMPLETE:" to finish.`;
   }
 
   steps.push({ type: 'final', content: finalOutput });
+  await runHooks('session_end', { task: options.task });
 
   return finalize(stopReason, finalOutput, {
     totalCost,
