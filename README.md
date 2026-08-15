@@ -149,6 +149,19 @@ cude chat
 
 ## Quick Start
 
+### One-line install
+
+```bash
+npm install -g github:Emrevrg/Cude-Code
+cude setup
+```
+
+The setup wizard configures a provider, model, workspace rules, and optional
+local integrations. Verify the installation with `cude doctor` and inspect the
+available providers with `cude providers list`.
+
+### From source
+
 ### 1. Install
 
 Not on npm yet. Install from source — this builds the CLI and puts `cude` on
