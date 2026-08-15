@@ -447,6 +447,8 @@ official product surface.
 | Code intelligence | Claude Code | Cude Code has real LSP diagnostics and doctor discovery; navigation operations are still expanding |
 | Scriptable/headless workflows | Codex / Claude Code | Cude Code supports `--json`, stdin-friendly commands, workers and explicit workflow modes |
 
+![Cude Code capability leaderboard](./docs/capability-leaderboard.svg)
+
 ### Honest current position
 
 Cude Code is now a strong open, provider-agnostic terminal agent with a wider

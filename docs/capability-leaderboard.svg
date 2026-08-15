@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 920" role="img" aria-labelledby="title desc">
+  <title id="title">Cude Code capability leaderboard — v0.1.0</title>
+  <desc id="desc">Capability comparison of Cude Code, Claude Code, and Codex across terminal workflows, extensibility, providers, automation, and visual review.</desc>
+  <rect width="1400" height="920" fill="#07080d"/>
+  <rect x="38" y="34" width="1324" height="852" rx="24" fill="#0d101a" stroke="#252c42"/>
+  <g font-family="Segoe UI, Arial, sans-serif" fill="#f8fafc">
+    <text x="82" y="102" font-size="42" font-weight="700">CUDE CODE</text>
+    <text x="82" y="145" font-size="20" fill="#9ca3af">Capability leaderboard · terminal-first coding agents</text>
+    <text x="1318" y="102" text-anchor="end" font-size="18" fill="#a5b4fc">v0.1.0 · 15 Aug 2026</text>
+    <text x="1318" y="132" text-anchor="end" font-size="16" fill="#6b7280">Evidence-based surface comparison</text>
+
+    <g transform="translate(82 190)">
+      <rect width="382" height="116" rx="16" fill="#171b2a" stroke="#6366f1" stroke-width="2"/>
+      <text x="24" y="38" font-size="24" font-weight="600">Cude Code</text>
+      <text x="24" y="70" font-size="17" fill="#c7d2fe">Open · local-first · provider agnostic</text>
+      <text x="24" y="96" font-size="15" fill="#818cf8">19 providers · MCP · hooks · subagents</text>
+    </g>
+    <g transform="translate(508 190)">
+      <rect width="382" height="116" rx="16" fill="#171b2a" stroke="#f59e0b" stroke-width="2"/>
+      <text x="24" y="38" font-size="24" font-weight="600">Claude Code</text>
+      <text x="24" y="70" font-size="17" fill="#fde68a">Mature terminal agent surface</text>
+      <text x="24" y="96" font-size="15" fill="#fbbf24">Teams · skills · hooks · MCP · headless</text>
+    </g>
+    <g transform="translate(934 190)">
+      <rect width="382" height="116" rx="16" fill="#171b2a" stroke="#22c55e" stroke-width="2"/>
+      <text x="24" y="38" font-size="24" font-weight="600">Codex</text>
+      <text x="24" y="70" font-size="17" fill="#bbf7d0">Desktop-integrated engineering workflow</text>
+      <text x="24" y="96" font-size="15" fill="#4ade80">Build · test · review · long-running goals</text>
+    </g>
+
+    <text x="82" y="366" font-size="22" font-weight="600">Capability matrix</text>
+    <text x="590" y="366" font-size="16" fill="#6b7280">✓ shipped · ◐ partial/optional · — not the primary surface</text>
+    <g transform="translate(82 392)">
+      <rect width="1236" height="58" fill="#171b2a"/>
+      <text x="24" y="37" font-size="16" fill="#9ca3af">CAPABILITY</text>
+      <text x="698" y="37" text-anchor="middle" font-size="16" fill="#c7d2fe">CUDE CODE</text>
+      <text x="918" y="37" text-anchor="middle" font-size="16" fill="#fde68a">CLAUDE CODE</text>
+      <text x="1130" y="37" text-anchor="middle" font-size="16" fill="#bbf7d0">CODEX</text>
+      <text x="1208" y="37" text-anchor="middle" font-size="16" fill="#9ca3af">LEAD</text>
+    </g>
+    <g transform="translate(82 450)" font-size="17">
+      <g fill="#111522"><rect width="1236" height="54"/><rect y="108" width="1236" height="54"/><rect y="216" width="1236" height="54"/><rect y="324" width="1236" height="54"/></g>
+      <g fill="#e5e7eb">
+        <text x="24" y="34">Terminal agent loop</text><text x="24" y="88">Provider breadth / local LLM</text><text x="24" y="142">MCP + hooks + skills</text><text x="24" y="196">Named subagents / isolation</text><text x="24" y="250">Long-running + JSON automation</text><text x="24" y="304">LSP / code intelligence</text><text x="24" y="358">Desktop visual review</text><text x="24" y="412">Open/local control</text>
+      </g>
+      <g font-size="20" text-anchor="middle">
+        <text x="698" y="34" fill="#818cf8">✓</text><text x="918" y="34" fill="#fbbf24">✓</text><text x="1130" y="34" fill="#4ade80">✓</text>
+        <text x="698" y="88" fill="#818cf8">✓</text><text x="918" y="88" fill="#fbbf24">◐</text><text x="1130" y="88" fill="#4ade80">◐</text>
+        <text x="698" y="142" fill="#818cf8">✓</text><text x="918" y="142" fill="#fbbf24">✓</text><text x="1130" y="142" fill="#4ade80">✓</text>
+        <text x="698" y="196" fill="#818cf8">✓</text><text x="918" y="196" fill="#fbbf24">✓</text><text x="1130" y="196" fill="#4ade80">✓</text>
+        <text x="698" y="250" fill="#818cf8">✓</text><text x="918" y="250" fill="#fbbf24">✓</text><text x="1130" y="250" fill="#4ade80">✓</text>
+        <text x="698" y="304" fill="#818cf8">◐</text><text x="918" y="304" fill="#fbbf24">✓</text><text x="1130" y="304" fill="#4ade80">◐</text>
+        <text x="698" y="358" fill="#818cf8">—</text><text x="918" y="358" fill="#fbbf24">◐</text><text x="1130" y="358" fill="#4ade80">✓</text>
+        <text x="698" y="412" fill="#818cf8">✓</text><text x="918" y="412" fill="#fbbf24">◐</text><text x="1130" y="412" fill="#4ade80">◐</text>
+      </g>
+      <g font-size="16" fill="#a5b4fc" text-anchor="middle"><text x="1208" y="34">Tie</text><text x="1208" y="88">Cude</text><text x="1208" y="142">Tie</text><text x="1208" y="196">Tie</text><text x="1208" y="250">Tie</text><text x="1208" y="304">Claude</text><text x="1208" y="358">Codex</text><text x="1208" y="412">Cude</text></g>
+    </g>
+    <line x1="82" y1="880" x2="1318" y2="880" stroke="#252c42"/>
+    <text x="82" y="910" font-size="14" fill="#6b7280">This is a capability map, not a vendor quality score. Re-run the repository tests before changing the snapshot.</text>
+  </g>
+</svg>
