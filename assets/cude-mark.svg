@@ -1,17 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Cude Code logo">
-  <title>Cude Code — canonical logo mark</title>
-
-  <desc>White C-shaped code mark with a chevron and split lower vertex.</desc>
-  <g fill="none" stroke="#ffffff" stroke-width="42" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Hexagon opened on the right side: this forms the "C".
-         Runs from the upper-right vertex counter-clockwise around to
-         the left leg of the bottom notch. -->
-    <path d="M 429 156 L 256 56 L 83 156 L 83 356 L 230 441 L 230 470"/>
-
-    <!-- Right leg of the bottom notch, sweeping up to the lower-right vertex. -->
-    <path d="M 282 470 L 282 441 L 429 356"/>
-
-    <!-- ">" chevron inside the mark -->
-    <path d="M 205 190 L 300 256 L 205 322" stroke-width="38"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Cude Code canonical logo">
+  <title>Cude Code — canonical logo</title>
+  <desc>White rounded C-shaped code mark and chevron with a split lower vertex on the Cude black field.</desc>
+  <rect width="512" height="512" rx="24" fill="#050505"/>
+  <g fill="none" stroke="#fff" stroke-width="42" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M429 156 256 56 83 156v200l147 85v29"/>
+    <path d="M282 470v-29l147-85"/>
+    <path d="m205 190 95 66-95 66" stroke-width="38"/>
   </g>
 </svg>

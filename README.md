@@ -431,6 +431,32 @@ Sessions are stored under `~/.cude/sessions/` and spending records under `~/.cud
 
 ## Benchmarks
 
+## Capability leaderboard
+
+Snapshot: **2026-08-15**, Cude Code **v0.1.0**. This is a capability map,
+not a fabricated benchmark score; each row is tied to a shipped command or an
+official product surface.
+
+| Area | Current leader | Cude Code status |
+|------|----------------|------------------|
+| Desktop workflow and visual review | Codex | Cude Code is terminal-native; use `cude produce` plus `cude review` for the equivalent review loop |
+| Mature terminal agent loop | Claude Code | Cude Claw provides read/plan/write/verify with safe confirmations |
+| Provider breadth and local endpoints | Cude Code | 19 built-in providers plus OpenAI-compatible LiteLLM/vLLM/Azure/GGUF and dynamic MCP tools |
+| Extensibility | Tie: Claude Code / Cude Code | Skills, hooks, subagents and MCP are available in Cude Code through `.cude/` |
+| Open, local-first operation | Cude Code | MIT repository, local sessions/memory/budget, no mandatory hosted control plane |
+| Code intelligence | Claude Code | Cude Code has real LSP diagnostics and doctor discovery; navigation operations are still expanding |
+| Scriptable/headless workflows | Codex / Claude Code | Cude Code supports `--json`, stdin-friendly commands, workers and explicit workflow modes |
+
+### Honest current position
+
+Cude Code is now a strong open, provider-agnostic terminal agent with a wider
+provider surface and unusually transparent local controls. Codex remains the
+strongest desktop-integrated workflow, while Claude Code remains the most
+mature terminal product surface. Cude Code’s differentiator is the combination
+of both ideas without locking the user to one model vendor: `write`,
+`understand`, `produce`, LSP, MCP, hooks, subagents, memory, RAG, browser
+automation, isolated workers and JSON automation in one local CLI.
+
 Measured on Node 22, Linux x64, from a release build. Reproduce with the
 commands in the right-hand column.
 
