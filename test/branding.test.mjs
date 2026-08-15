@@ -23,5 +23,6 @@ test('CLI banner uses the portable canonical silhouette', () => {
   assert.match(display, /CLI_LOGO_ART/);
   assert.match(display, /gradient\(CLI_LOGO_ART\)/);
   assert.match(svg, /split lower vertex/);
-  assert.match(svg, /fill="#000000"/);
+  assert.doesNotMatch(svg, /<rect|fill="#000000"/);
+  assert.match(svg, /stroke="#fff"/);
 });

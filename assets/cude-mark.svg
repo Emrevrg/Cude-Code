@@ -1,7 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Cude Code white mark">
   <title>Cude Code — white mark</title>
-  <desc>White rounded open C-shaped code mark with a centered chevron and split lower vertex on a pure black square field.</desc>
-  <rect width="512" height="512" fill="#000000"/>
+  <desc>Transparent, white rounded open C-shaped code mark with a centered chevron and split lower vertex.</desc>
   <g fill="none" stroke="#fff" stroke-width="42" stroke-linecap="round" stroke-linejoin="round">
     <path d="M429 156 256 56 83 156v200l147 85v29"/>
     <path d="M282 470v-29l147-85"/>
