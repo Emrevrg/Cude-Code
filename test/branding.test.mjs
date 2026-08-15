@@ -22,9 +22,8 @@ test('CLI banner uses the portable canonical silhouette', () => {
   const svg = readFileSync(join(root, 'assets', 'cude-mark.svg'), 'utf8');
   assert.match(display, /CLI_LOGO_ART/);
   assert.match(display, /gradient\(CLI_LOGO_ART\)/);
-  assert.match(svg, /flat and split/);
+  assert.match(svg, /Exact vector trace/);
   assert.doesNotMatch(svg, /<rect|fill="#000000"/);
-  assert.match(svg, /stroke="#fff"/);
-  assert.match(svg, /matrix\(\.5304 0 0 \.57 120\.2176 101\.75\)/);
-  assert.match(svg, /stroke-linecap="butt"/);
+  assert.match(svg, /fill="#fff"/);
+  assert.match(svg, /fill-rule="evenodd"/);
 });

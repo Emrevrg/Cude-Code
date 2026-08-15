@@ -1,12 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Cude Code white mark">
   <title>Cude Code — white mark</title>
-  <desc>Transparent white Cude Code mark. The two lower ends are deliberately flat and split, never rounded tail caps.</desc>
-  <!-- Geometry traced from the supplied transparent reference artwork. -->
-  <g fill="none" stroke="#fff" stroke-width="42" stroke-linecap="round" stroke-linejoin="round" transform="matrix(.5304 0 0 .57 120.2176 101.75)">
-    <path d="M429 156 256 56 83 156v200l147 85"/>
-    <path d="M282 441l147-85"/>
-    <!-- Flat terminations preserve the reference's sharp split, rather than creating tails. -->
-    <path d="M230 441v29M282 470v-29" stroke-linecap="butt"/>
-  </g>
-  <path d="m239 220 54 36-54 36" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <desc>Exact vector trace of the supplied transparent Cude Code reference artwork.</desc>
+  <path fill="#fff" fill-rule="evenodd" d="M357.257,286.622 L353.174,282.539 L347.866,280.089 L341.333,279.681 L336.434,280.906 L267.432,326.226 L263.758,330.309 L262.124,335.617 L262.124,368.689 L262.941,369.097 L353.582,310.303 L358.073,304.995 L360.115,299.687 L360.115,293.155 Z M238.852,206.596 L234.360,208.638 L230.686,213.537 L229.869,219.662 L231.502,224.153 L235.177,228.236 L263.758,246.609 L261.308,249.059 L234.769,265.799 L231.502,269.474 L229.869,273.965 L229.869,277.640 L231.911,282.539 L234.769,285.397 L238.035,287.030 L242.935,287.439 L247.834,285.805 L295.604,256.000 L298.871,251.509 L299.687,244.976 L298.463,241.301 L294.380,236.810 L247.018,207.413 L244.159,206.596 Z M259.675,121.671 L252.734,121.671 L246.609,124.121 L163.726,177.199 L158.010,183.324 L155.560,190.673 L155.152,302.545 L158.010,309.895 L162.501,314.794 L248.242,368.689 L249.059,368.689 L249.467,367.464 L249.467,336.026 L247.018,329.901 L243.751,327.043 L190.673,294.788 L187.815,292.338 L186.590,289.888 L186.590,203.738 L187.815,201.289 L197.614,194.348 L253.959,158.826 L259.266,159.234 L329.901,202.922 L338.475,207.413 L347.049,207.821 L352.357,205.780 L357.257,201.289 L358.890,198.839 L360.523,193.531 L360.523,189.448 L359.298,184.957 L356.848,180.874 L352.766,177.199 L266.207,124.121 Z"/>
 </svg>
