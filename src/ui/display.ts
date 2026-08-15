@@ -92,6 +92,40 @@ export function showBanner(): void {
   console.log();
 }
 
+export interface AgentHeaderOptions {
+  task: string;
+  provider: string;
+  model: string;
+  reason?: string;
+}
+
+/** Consistent terminal surface for every autonomous run. */
+export function showAgentHeader(options: AgentHeaderOptions): void {
+  const task = options.task.replace(/\s+/g, ' ').trim();
+  const content = [
+    chalk.bold.white('CUDE CLAW'),
+    chalk.dim('  autonomous coding session'),
+    '',
+    `${chalk.dim('Task')}      ${chalk.white(task.length > 96 ? `${task.slice(0, 93)}...` : task)}`,
+    `${chalk.dim('Provider')}  ${chalk.cyan(options.provider)}`,
+    `${chalk.dim('Model')}     ${chalk.cyan(options.model)}`,
+    options.reason ? chalk.dim(`Route     ${options.reason}`) : '',
+  ].filter(Boolean).join('\n');
+  console.log(boxen(content, {
+    padding: { top: 0, bottom: 0, left: 2, right: 2 },
+    margin: { top: 0, bottom: 1, left: 0, right: 0 },
+    borderColor: 'cyan',
+    borderStyle: 'round',
+  }));
+}
+
+export function showDivider(label?: string): void {
+  const width = Math.max(24, Math.min(96, process.stdout.columns ?? 80));
+  const text = label ? ` ${label} ` : '';
+  const remaining = Math.max(3, width - text.length - 2);
+  console.log(chalk.dim(`───${text}${'─'.repeat(remaining)}`));
+}
+
 export function renderMarkdown(text: string): string {
   try {
     const result = marked(text);

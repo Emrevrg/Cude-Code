@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { runAgent, STOP_REASON_MESSAGES } from '../core/agent.js';
 import { selectProviderAndModel, type TaskType } from '../core/selector.js';
 import { startSpinner, stopSpinner, updateSpinner } from '../ui/spinner.js';
-import { showError, showSuccess, showCostInfo, renderMarkdown } from '../ui/display.js';
+import { showError, showSuccess, showCostInfo, renderMarkdown, showAgentHeader, showDivider } from '../ui/display.js';
 import type { AgentStep } from '../core/agent.js';
 import { formatActivity, summarizeActivity, activityFromAgentSteps } from '../core/activity.js';
 
@@ -67,15 +67,8 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
     preferredModel,
   });
 
-  if (!json) console.log();
-  if (!json) console.log(chalk.bold.cyan('  Cude Agent'));
-  console.log(chalk.dim('  ─────────────────────────────────'));
   if (!json) {
-    console.log(chalk.dim('  Task:     ') + chalk.white(task));
-    console.log(chalk.dim('  Provider: ') + chalk.cyan(provider.displayName));
-    console.log(chalk.dim('  Model:    ') + chalk.cyan(model));
-    if (reason) console.log(chalk.dim(`  (${reason})`));
-    console.log();
+    showAgentHeader({ task, provider: provider.displayName, model, reason });
   }
 
   // Ask for confirmation unless --yes flag
@@ -153,7 +146,7 @@ export async function runRun(task: string, options: RunCommandOptions = {}): Pro
     }
 
     console.log();
-    console.log(chalk.dim('  ─────────────────────────────────'));
+    showDivider('session result');
     console.log(chalk.dim('  Iterations: ') + result.iterations);
     showCostInfo(result.totalCost, result.totalInputTokens, result.totalOutputTokens);
     console.log();
