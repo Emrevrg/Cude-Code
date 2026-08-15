@@ -38,7 +38,7 @@ async function request(server: McpServerConfig, method: string, params: Record<s
         } catch (error) { finish(error instanceof Error ? error : new Error(String(error))); }
       }
     });
-    const init = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'cude-code', version: '0.1.0' } } });
+    const init = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'cude-code', version: '0.2.0' } } });
     child.stdin.write(`Content-Length: ${Buffer.byteLength(init)}\r\n\r\n${init}`);
     child.stdin.write(`Content-Length: ${Buffer.byteLength(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized', params: {} }))}\r\n\r\n${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized', params: {} })}`);
     const body = JSON.stringify({ jsonrpc: '2.0', id: 2, method, params });

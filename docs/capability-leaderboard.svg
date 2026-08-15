@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 920" role="img" aria-labelledby="title desc">
-  <title id="title">Cude Code capability leaderboard — v0.1.0</title>
+  <title id="title">Cude Code capability leaderboard — v0.2.0</title>
   <desc id="desc">Capability comparison of Cude Code, Claude Code, and Codex across terminal workflows, extensibility, providers, automation, and visual review.</desc>
   <rect width="1400" height="920" fill="#07080d"/>
   <rect x="38" y="34" width="1324" height="852" rx="24" fill="#0d101a" stroke="#252c42"/>
   <g font-family="Segoe UI, Arial, sans-serif" fill="#f8fafc">
     <text x="82" y="102" font-size="42" font-weight="700">CUDE CODE</text>
     <text x="82" y="145" font-size="20" fill="#9ca3af">Capability leaderboard · terminal-first coding agents</text>
-    <text x="1318" y="102" text-anchor="end" font-size="18" fill="#a5b4fc">v0.1.0 · 15 Aug 2026</text>
+    <text x="1318" y="102" text-anchor="end" font-size="18" fill="#a5b4fc">v0.2.0 · 15 Aug 2026</text>
     <text x="1318" y="132" text-anchor="end" font-size="16" fill="#6b7280">Evidence-based surface comparison</text>
 
     <g transform="translate(82 190)">

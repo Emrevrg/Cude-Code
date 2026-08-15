@@ -142,3 +142,16 @@ export async function runSessionsFork(idOrName: string, name: string): Promise<v
   console.log(chalk.dim(`  New id: ${fork.id}`));
   console.log(chalk.dim(`  Parent: ${source.id}`));
 }
+
+export async function runSessionsShow(idOrName: string): Promise<void> {
+  let session = loadSession(idOrName);
+  if (!session) session = listSessions().find(s => s.id.startsWith(idOrName) || s.name.toLowerCase() === idOrName.toLowerCase()) ?? null;
+  if (!session) { showError('Session not found: ' + idOrName); process.exitCode = 1; return; }
+  console.log(chalk.bold.cyan('\n  ' + session.name));
+  console.log(chalk.dim('  ' + session.provider + ' / ' + session.model + ' · ' + session.messages.filter(m => m.role !== 'system').length + ' messages\n'));
+  for (const message of session.messages) {
+    if (message.role === 'system') continue;
+    const label = message.role === 'user' ? chalk.green('You') : message.role === 'tool' ? chalk.yellow('Tool') : chalk.blue('Assistant');
+    console.log(label + ' ' + chalk.dim('›') + ' ' + message.content + '\n');
+  }
+}

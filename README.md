@@ -6,7 +6,7 @@
 
 > A provider-agnostic, safety-first AI coding agent for the terminal.
 
-Current release: **v0.1.0** · [Changelog](CHANGELOG.md) · [Security policy](SECURITY.md)
+Current release: **v0.2.0** · [Changelog](CHANGELOG.md) · [Security policy](SECURITY.md)
 
 ## Cude Claw
 
@@ -121,11 +121,42 @@ See [docs/CUDE-CLAW.md](docs/CUDE-CLAW.md) for the workflow and extension guide.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
-[![Status](https://img.shields.io/badge/Status-v0.1.0%20Early%20Release-blue)](./CHANGELOG.md)
+[![Status](https://img.shields.io/badge/Status-v0.2.0%20Early%20Release-blue)](./CHANGELOG.md)
 
 **The professional, multi-provider AI development CLI for your terminal**
 
-Cude Code is a feature-rich CLI tool for AI-assisted development. It supports 19 AI providers, 22 agent tools, browser automation, native RAG, and brings professional capabilities to your terminal.
+Cude Code is a feature-rich CLI tool for AI-assisted development. It ships with 19 built-in providers, dynamic custom OpenAI-compatible endpoints, 22 built-in agent tools plus MCP tools, browser automation, native RAG, durable CudeClaw jobs, and brings professional capabilities to your terminal.
+
+### Long-running work and custom models
+
+Queue durable work for CudeClaw and keep the worker running in a separate terminal or service:
+
+```bash
+cude claw add "inspect the repository, implement the fix, and run the tests" --provider ollama --model llama3.1
+cude claw worker
+cude claw list
+```
+
+Jobs are persisted under `~/.cude/claw-jobs.json`, so a restart does not lose queued work. The worker is intentionally foreground and service-friendly: on Windows use Task Scheduler, and on Linux/macOS use systemd/launchd. It cannot execute while the computer is powered off.
+
+Any OpenAI-compatible endpoint can be registered, including LM Studio, llama.cpp, vLLM, LiteLLM, Ollama-compatible gateways, or a private gateway:
+
+```bash
+cude providers add my-local --base-url http://localhost:1234/v1 --model my-model --local
+cude providers add my-gateway --base-url https://llm.example.com/v1 --model coder --api-key-env MY_GATEWAY_KEY
+cude providers custom-list
+```
+
+Custom providers receive the same agent loop and tool schema as built-ins. Use `--api-key-env` for secrets; provider definitions are stored in the Cude config directory.
+
+Conversation visibility is available both inside chat (`/history 20`, `/summary`, `/activity`) and without reopening a session:
+
+```bash
+cude sessions show <id-or-name>
+cude sessions export <id-or-name>
+```
+
+The activity panel reports observable model calls, tool calls, approvals, warnings, errors, cost, and tokens. It never claims to expose private chain-of-thought.
 
 ```bash
 git clone https://github.com/Emrevrg/Cude-Code.git
@@ -433,7 +464,7 @@ Sessions are stored under `~/.cude/sessions/` and spending records under `~/.cud
 
 ## Capability leaderboard
 
-Snapshot: **2026-08-15**, Cude Code **v0.1.0**. This is a capability map,
+Snapshot: **2026-08-15**, Cude Code **v0.2.0**. This is a capability map,
 not a fabricated benchmark score; each row is tied to a shipped command or an
 official product surface.
 

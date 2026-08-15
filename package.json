@@ -1,6 +1,6 @@
 {
   "name": "cude-code",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Professional open-source CLI AI Development Tool with 19 providers, 22 agent tools, browser automation, native RAG, sessions, and budget tracking",
   "author": "Cude Code Contributors <zgremre@gmail.com>",
   "license": "MIT",

@@ -59,7 +59,7 @@ export async function getDiagnostics(file: string, options: LspOptions): Promise
         } catch { /* ignore malformed server output */ }
       }
     });
-    send(child, { jsonrpc: '2.0', id: 1, method: 'initialize', params: { processId: process.pid, rootUri: pathToFileURL(process.cwd()).toString(), capabilities: {}, clientInfo: { name: 'cude-code', version: '0.1.0' } } });
+    send(child, { jsonrpc: '2.0', id: 1, method: 'initialize', params: { processId: process.pid, rootUri: pathToFileURL(process.cwd()).toString(), capabilities: {}, clientInfo: { name: 'cude-code', version: '0.2.0' } } });
     send(child, { jsonrpc: '2.0', method: 'initialized', params: {} });
     send(child, { jsonrpc: '2.0', method: 'textDocument/didOpen', params: { textDocument: { uri, languageId: languageIdFor(file), version: 1, text } } });
   });

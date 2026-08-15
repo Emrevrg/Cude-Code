@@ -18,8 +18,10 @@ import { VLLMProvider } from './vllm.js';
 import { ReplicateProvider } from './replicate.js';
 import { LocalGGUFProvider } from './gguf.js';
 import type { Provider, CostClass } from './types.js';
+import { getCustomProviders } from '../config/index.js';
+import { CustomOpenAIProvider } from './custom.js';
 
-const providers: Provider[] = [
+const builtInProviders: Provider[] = [
   new AnthropicProvider(),
   new OpenAIProvider(),
   new GeminiProvider(),
@@ -40,6 +42,10 @@ const providers: Provider[] = [
   new ReplicateProvider(),
   new LocalGGUFProvider(),
 ];
+
+function allProviders(): Provider[] {
+  return [...builtInProviders, ...getCustomProviders().map(config => new CustomOpenAIProvider(config))];
+}
 
 /**
  * The Free/Local label, read from provider and model metadata rather than the
@@ -63,6 +69,7 @@ export function isSelfHosted(provider: Provider): boolean {
 }
 
 export function getProvider(name: string): Provider {
+  const providers = allProviders();
   const provider = providers.find(p => p.name === name);
   if (!provider) {
     throw new Error(`Unknown provider: ${name}. Available: ${providers.map(p => p.name).join(', ')}`);
@@ -71,15 +78,15 @@ export function getProvider(name: string): Provider {
 }
 
 export function listProviders(): Provider[] {
-  return providers;
+  return allProviders();
 }
 
 export function getConfiguredProviders(): Provider[] {
-  return providers.filter(p => p.isConfigured());
+  return allProviders().filter(p => p.isConfigured());
 }
 
 export function getFreeProviders(): Provider[] {
-  return providers.filter(
+  return allProviders().filter(
     p => p.name === 'groq' || 
          p.name === 'ollama' || 
          p.name === 'gemini' || 

@@ -40,6 +40,7 @@ ${chalk.bold.cyan('Chat Commands:')}
   ${chalk.yellow('/info')}          Show current session info
   ${chalk.yellow('/summary')}       Show the observable activity summary
   ${chalk.yellow('/activity')}      Show the latest activity events
+  ${chalk.yellow('/history [n]')}   Show recent conversation turns
 `;
 
 export async function runChat(options: ChatCommandOptions = {}): Promise<void> {
@@ -261,6 +262,16 @@ export async function runChat(options: ChatCommandOptions = {}): Promise<void> {
         if (summary.lastAction) console.log(chalk.dim(`  Last observed action: ${summary.lastAction}`));
         if (cmd === 'activity') console.log(`\n${formatActivity(activity)}`);
         console.log();
+        continue;
+      }
+
+      if (cmd === 'history') {
+        const limit = Math.max(1, Number(parts[1] ?? 12) || 12);
+        console.log();
+        for (const message of messages.filter(m => m.role !== 'system').slice(-limit)) {
+          const label = message.role === 'user' ? chalk.green('You') : message.role === 'tool' ? chalk.yellow('Tool') : chalk.blue('Assistant');
+          console.log(label + ' ' + chalk.dim('›') + ' ' + message.content.slice(0, 1200) + '\n');
+        }
         continue;
       }
 

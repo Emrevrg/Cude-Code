@@ -9,7 +9,7 @@ export function createCLI(): Command {
   program
     .name('cude')
     .description(chalk.cyan('Cude Code — autonomous AI development CLI for your terminal'))
-    .version('0.1.0')
+    .version('0.2.0')
     .option('--no-banner', 'Skip the banner display')
     .hook('preAction', (thisCommand) => {
       const opts = program.opts() as { banner: boolean };
@@ -229,6 +229,9 @@ export function createCLI(): Command {
       const { runSessionsExport } = await import('./commands/sessions.js');
       await runSessionsExport(id, output);
     });
+  sessionsCmd.command('show <id>')
+    .description('View the full transcript of a session without entering chat')
+    .action(async (id: string) => { const { runSessionsShow } = await import('./commands/sessions.js'); await runSessionsShow(id); });
 
   program
     .command('write <task>')
@@ -385,6 +388,12 @@ export function createCLI(): Command {
       if (!result.success) process.exitCode = 1;
     });
 
+  const clawCmd = program.command('claw').description('Durable CudeClaw queue for long-running work');
+  clawCmd.command('add <task>').description('Queue a task for a persistent worker').option('-p, --provider <name>').option('-m, --model <name>').option('-t, --task-type <type>', 'Task type', 'code').option('--max-iterations <n>', 'Maximum iterations', '10').action(async (task: string, options: { provider?: string; model?: string; taskType?: string; maxIterations?: string }) => { const { runClawAdd } = await import('./commands/claw.js'); runClawAdd(task, options); });
+  clawCmd.command('list').description('List queued and completed jobs').action(async () => { const { runClawList } = await import('./commands/claw.js'); runClawList(); });
+  clawCmd.command('cancel <id>').description('Cancel a queued job').action(async (id: string) => { const { runClawCancel } = await import('./commands/claw.js'); runClawCancel(id); });
+  clawCmd.command('worker').description('Run the durable worker until interrupted').option('--interval <seconds>', 'Polling interval', '15').option('--once', 'Process one queued job and exit').action(async (options: { interval?: string; once?: boolean }) => { const { runClawWorker } = await import('./commands/claw.js'); await runClawWorker(options); });
+
   // ─── PROVIDERS COMMAND ────────────────────────────────────────────────────
   const providersCmd = program
     .command('providers')
@@ -423,6 +432,22 @@ export function createCLI(): Command {
       const { runConfigWizard } = await import('./commands/config.js');
       await runConfigWizard();
     });
+
+  providersCmd.command('custom-list')
+    .description('List saved OpenAI-compatible custom providers')
+    .action(async () => { const { runCustomProvidersList } = await import('./commands/providers.js'); runCustomProvidersList(); });
+  providersCmd.command('add <name>')
+    .description('Add an OpenAI-compatible or local provider')
+    .requiredOption('--base-url <url>', 'Chat completions base URL')
+    .requiredOption('--model <id>', 'Default model id')
+    .option('--display-name <name>', 'Friendly display name')
+    .option('--api-key-env <name>', 'Environment variable containing the API key')
+    .option('--api-key <key>', 'API key (prefer --api-key-env for safety)')
+    .option('--local', 'Mark this provider as local and zero-cost')
+    .action(async (name: string, options: { baseUrl: string; model: string; displayName?: string; apiKeyEnv?: string; apiKey?: string; local?: boolean }) => { const { runCustomProviderAdd } = await import('./commands/providers.js'); runCustomProviderAdd(name, options); });
+  providersCmd.command('remove <name>')
+    .description('Remove a saved custom provider')
+    .action(async (name: string) => { const { runCustomProviderRemove } = await import('./commands/providers.js'); runCustomProviderRemove(name); });
 
   program
     .command('context')

@@ -4,6 +4,26 @@ import { MODELS } from '../config/models.js';
 import { showProviderTable, showModelTable } from '../ui/display.js';
 import { startSpinner, stopSpinner } from '../ui/spinner.js';
 import { OllamaProvider } from '../providers/ollama.js';
+import { getCustomProviders, saveCustomProvider, removeCustomProvider } from '../config/index.js';
+
+export function runCustomProvidersList(): void {
+  const providers = getCustomProviders();
+  console.log();
+  console.log(chalk.bold.cyan('  Custom OpenAI-compatible providers'));
+  if (!providers.length) console.log(chalk.dim('  None configured. Add one with: cude providers add <name> --base-url <url> --model <id>'));
+  for (const provider of providers) console.log('  ' + chalk.cyan(provider.name) + '  ' + provider.baseUrl + '  ' + chalk.dim(provider.model) + (provider.local ? chalk.green('  [local]') : ''));
+  console.log();
+}
+
+export function runCustomProviderAdd(name: string, options: { baseUrl: string; model: string; displayName?: string; apiKeyEnv?: string; apiKey?: string; local?: boolean }): void {
+  saveCustomProvider({ name, displayName: options.displayName ?? name, baseUrl: options.baseUrl, model: options.model, apiKeyEnv: options.apiKeyEnv, apiKey: options.apiKey, local: options.local });
+  console.log(chalk.green('  Custom provider saved: ' + name));
+  console.log(chalk.dim('  Use: cude run "task" -p ' + name + ' -m ' + options.model + ' --yes'));
+}
+
+export function runCustomProviderRemove(name: string): void {
+  console.log(removeCustomProvider(name) ? chalk.green('  Removed custom provider: ' + name) : chalk.yellow('  Custom provider not found: ' + name));
+}
 
 export async function runProvidersList(): Promise<void> {
   const providers = listProviders();

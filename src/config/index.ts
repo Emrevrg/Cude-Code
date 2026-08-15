@@ -18,6 +18,14 @@ export interface AppConfig {
   budgetAlertThreshold?: number;
   theme?: 'default' | 'minimal';
   firstRun?: boolean;
+  customProviders?: Record<string, {
+    displayName: string;
+    baseUrl: string;
+    model: string;
+    apiKeyEnv?: string;
+    apiKey?: string;
+    local?: boolean;
+  }>;
 }
 
 const defaultConfig: AppConfig = {
@@ -28,6 +36,7 @@ const defaultConfig: AppConfig = {
   budgetAlertThreshold: undefined,
   theme: 'default',
   firstRun: true,
+  customProviders: {},
 };
 
 /**
@@ -186,4 +195,34 @@ export function markFirstRunDone(): void {
 
 export function getConfigPath(): string {
   return getDataDir();
+}
+
+export interface CustomProviderConfig {
+  name: string;
+  displayName: string;
+  baseUrl: string;
+  model: string;
+  apiKeyEnv?: string;
+  apiKey?: string;
+  local?: boolean;
+}
+
+export function getCustomProviders(): CustomProviderConfig[] {
+  const entries = (getConfig().get('customProviders') ?? {}) as AppConfig['customProviders'];
+  return Object.entries(entries ?? {}).map(([name, value]) => ({ name, ...value }));
+}
+
+export function saveCustomProvider(config: CustomProviderConfig): void {
+  const providers = (getConfig().get('customProviders') ?? {}) as NonNullable<AppConfig['customProviders']>;
+  const { name, ...value } = config;
+  providers[name] = value;
+  getConfig().set('customProviders', providers);
+}
+
+export function removeCustomProvider(name: string): boolean {
+  const providers = (getConfig().get('customProviders') ?? {}) as NonNullable<AppConfig['customProviders']>;
+  if (!providers[name]) return false;
+  delete providers[name];
+  getConfig().set('customProviders', providers);
+  return true;
 }
