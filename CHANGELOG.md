@@ -4,6 +4,112 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Benchmarking
+
+Cude has no verified score on any independent leaderboard, and this release
+does not invent one. It adds the harness that can produce one — `cude bench` —
+together with the agent-loop work that a long benchmark run needs in order to
+finish at all.
+
+- **`cude bench local|swebench|terminal-bench|list`.** Each task runs in its own
+  temp sandbox with the workspace root pointed at it, and is graded by a shell
+  command run *after* the agent stops — the model's "TASK COMPLETE:" has no
+  bearing on the result. Reports (`run.json`, `report.md`) carry a provenance
+  label: `local`, `unofficial` or `official`, with the caveat printed above the
+  number.
+- **The local suite** — eight tasks graded by `node --test`: implement against
+  a test, fix real bugs, rename across files, make a precise single-function
+  edit, document a module. No Docker, no dataset, no network. A test asserts
+  every task fails before the agent touches it, and tasks graded by a test file
+  restore that file first, so deleting the test cannot pass a task.
+- **SWE-bench Verified** — checks out each instance at its base commit, runs the
+  agent, and writes `predictions.jsonl` for the *official* Docker evaluator.
+  Cude does not grade itself on it. See [BENCHMARKS.md](BENCHMARKS.md).
+
+### Agent
+
+Six changes to the loop, each of which the benchmark harness measures (O1–O6):
+
+- **Context compaction.** The loop re-sends the whole conversation every turn,
+  so a run that read a few large files did not degrade — it died on a
+  context-window error. Old tool results are digested, then whole steps are
+  dropped, oldest first, with a note left where they were. The turn-sequence
+  invariant is preserved at every budget, which is tested.
+- **Tool-call repair.** `writeFile` → `write_file`, `file_path` → `path`, `bash`
+  → `run_command`, a JSON object inside a markdown fence → arguments. Only
+  unambiguous corrections are applied, and every one is reported. A misnamed
+  call used to cost a full iteration.
+- **Parallel reads.** A turn whose calls are all read-only runs concurrently;
+  anything that mutates forces sequential execution.
+- **`apply_patch` is atomic.** It located hunks by line number and skipped a
+  `-` line that did not match *while still inserting the `+` lines around it* —
+  a corrupted file, reported as success. Hunks are now found by content, all of
+  them apply or none do, and the error names the hunk that failed.
+- **Verification before completion.** `verifyCommand` runs the project's own
+  tests when the model says it is finished; a failure is handed back with its
+  output and the loop continues. A run that never satisfies it stops with
+  `verification_failed` instead of `completed`.
+- **Retry with backoff.** 429 and 5xx responses are retried with exponential
+  backoff and jitter, honouring `Retry-After`. One rate limit used to end a
+  run.
+
+Also fixed: child processes inherited `NODE_TEST_CONTEXT`, so any nested
+`node --test` reported success regardless of its tests — a verification command
+that always passes is worse than none.
+
+### Security
+
+A security core (`src/core/security.ts`) that every tool call now passes
+through, plus `cude security scan|audit|log|check`. The controls are enforced
+in code, not asked for in the system prompt, because the model is a confused
+deputy and not an adversary: it reads web pages, dependency READMEs and MCP
+results that anyone can write. Nine classes of exposure closed (S1–S9):
+
+- **S1 — Credential files are refused.** `.env`, `~/.ssh`, `~/.aws`, `~/.gnupg`,
+  `*.pem`, `*.key`, `.npmrc`, `.netrc`, service-account JSON and the rest are
+  unreadable through `read_file`, `grep_search`, `diff_files`, `copy_file`,
+  `get_file_info`, RAG indexing, Claw's `@path` mentions and `file://` URLs.
+  `.env.example` and other templates stay readable. RAG's file walk had gone
+  out of its way to include `.env` — the one dotfile it skipped the dotfile
+  rule for was the one holding the keys.
+- **S2 — Secrets are redacted before they leave.** All tool output passes one
+  choke point; anything matching a live credential shape becomes
+  `[CUDE:REDACTED:<rule>]` before it reaches the model, the terminal or a
+  session file. Placeholders and low-entropy values are left alone.
+- **S3 — Redaction markers cannot be written back.** `write_file`,
+  `replace_in_file` and `apply_patch` refuse content containing a marker, so a
+  placeholder can never overwrite the real value. Writing a *new* live
+  credential into a file asks first.
+- **S4 — Command analysis replaces the blocklist.** Three verdicts instead of
+  one boolean. Blocked outright: encoded PowerShell, base64-into-a-shell, and
+  commands that read credential material and send it over the network.
+  Confirmed: destructive commands, uploads, inline interpreter one-liners,
+  persistence, broad permission grants, reverse shells. A command's working
+  directory is now confined to the workspace root, and output is capped.
+- **S5 — Child processes no longer inherit credentials.** `run_command`,
+  `git_command`, `npm_command` and stdio MCP servers get an environment with
+  every credential-shaped variable removed. A malicious `postinstall` script
+  used to receive every API key the user had exported.
+- **S6 — Egress control.** Cloud metadata endpoints are always refused; only
+  `http`, `https` and `file` schemes are allowed; `file://` obeys the read
+  deny-list. `browser_screenshot` was the one write path in the tool set that
+  never checked the workspace boundary — it does now.
+- **S7 — Untrusted content is labelled.** Browser and MCP output is wrapped in
+  `<untrusted source="…">` and scanned for injection markers.
+- **S8 — Owner-only storage and an audit log.** `~/.cude` and everything in it
+  is written `0600`/`0700` on POSIX; session transcripts are redacted before
+  they are saved; every tool call is appended to `~/.cude/audit.log` with
+  redacted arguments and its outcome. Sessions also stopped ignoring
+  `CUDE_HOME`, which they had been writing around.
+- **S9 — `cude security scan`.** The same detection, pointed at a project: it
+  finds hardcoded credentials in source, reports credential files that git is
+  tracking, and exits non-zero under `--strict` for CI.
+
+Every control has a documented escape hatch — `CUDE_ALLOW_SECRET_FILES`,
+`CUDE_NO_REDACT`, `CUDE_ALLOW_UNSAFE_COMMANDS`, `CUDE_INHERIT_SECRETS`,
+`CUDE_AUDIT=0` — and `cude security audit` reports any that are set. See
+[SECURITY.md](SECURITY.md).
+
 ### New Features
 
 - **Cude Claw** (`cude claw`) — an interactive agent session that keeps context
