@@ -460,46 +460,17 @@ Sessions are stored under `~/.cude/sessions/` and spending records under `~/.cud
 - Safe command execution
 - Open source for transparency
 
-## Benchmarks
+## Release validation
 
-## Capability leaderboard
+Cude Code v0.2.0 is accompanied by a reproducible local verification record,
+not a marketing score or a vendor comparison.
 
-Snapshot: **2026-08-15**, Cude Code **v0.2.0**. This is a capability map,
-not a fabricated benchmark score; each row is tied to a shipped command or an
-official product surface.
+![Cude Code release validation](./docs/release-validation.svg)
 
-| Area | Current leader | Cude Code status |
-|------|----------------|------------------|
-| Desktop workflow and visual review | Codex | Cude Code is terminal-native; use `cude produce` plus `cude review` for the equivalent review loop |
-| Mature terminal agent loop | Claude Code | Cude Claw provides read/plan/write/verify with safe confirmations |
-| Provider breadth and local endpoints | Cude Code | 19 built-in providers plus OpenAI-compatible LiteLLM/vLLM/Azure/GGUF and dynamic MCP tools |
-| Extensibility | Tie: Claude Code / Cude Code | Skills, hooks, subagents and MCP are available in Cude Code through `.cude/` |
-| Open, local-first operation | Cude Code | MIT repository, local sessions/memory/budget, no mandatory hosted control plane |
-| Code intelligence | Claude Code | Cude Code has real LSP diagnostics and doctor discovery; navigation operations are still expanding |
-| Scriptable/headless workflows | Codex / Claude Code | Cude Code supports `--json`, stdin-friendly commands, workers and explicit workflow modes |
-
-![Cude Code capability leaderboard](./docs/capability-leaderboard.svg)
-
-### Honest current position
-
-Cude Code is now a strong open, provider-agnostic terminal agent with a wider
-provider surface and unusually transparent local controls. Codex remains the
-strongest desktop-integrated workflow, while Claude Code remains the most
-mature terminal product surface. Cude Code’s differentiator is the combination
-of both ideas without locking the user to one model vendor: `write`,
-`understand`, `produce`, LSP, MCP, hooks, subagents, memory, RAG, browser
-automation, isolated workers and JSON automation in one local CLI.
-
-Measured on Node 22, Linux x64, from a release build. Reproduce with the
-commands in the right-hand column.
-
-| Metric | Value | How it was measured |
-|--------|-------|---------------------|
-| Cold start | ~0.31 s | `time node dist/index.js --version` |
-| Peak memory, cold start | ~84 MB | `VmHWM` of the CLI process |
-| Providers | 19 | `cude providers list` |
-| Agent tools | 22 | `TOOL_DEFINITIONS.length` |
-| Task types routed | 9 | `src/core/selector.ts` |
+The latest verification run recorded **94 passing tests**, **0 failures**,
+successful TypeScript compilation, and **0 lint errors**. See the full
+[release validation record](./docs/RELEASE-VALIDATION.md), including the
+remaining non-blocking lint advisories and how the result was measured.
 
 ## Contributing
 
@@ -526,7 +497,7 @@ Free for personal and commercial use.
 
 ## Roadmap
 
-### Current (v0.1)
+### Current (v0.2)
 - 19 AI providers
 - Chat & autonomous agent modes
 - 22 agent tools (file ops, git, npm, diff, patch, search, browser, RAG)
@@ -536,9 +507,12 @@ Free for personal and commercial use.
 - Cost tracking with budgets & alerts
 - Environment-variable key fallback
 - Automatic legacy data migration
+- MCP tools, hooks, named subagents and project skills
+- Durable CudeClaw job queue and worker
+- Custom OpenAI-compatible local or hosted providers
+- Conversation transcripts and observable activity summaries
 
-### Planned (v0.2)
-- MCP (Model Context Protocol) server support
+### Planned (v0.3)
 - VS Code extension
 - Advanced analytics & spend reports
 
