@@ -14,3 +14,7 @@ dist/
 
 # Local README preview render
 .readme-preview.html
+
+# Benchmark runs: reports are artifacts of a machine, a model and a moment.
+# A published score belongs in BENCHMARKS.md, with the command that produced it.
+.cude-bench/
