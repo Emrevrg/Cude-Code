@@ -8,6 +8,29 @@ function collect(value: string, previous: string[]): string[] {
   return [...previous, value];
 }
 
+/** Commander hands every option through as a string; the harness wants numbers. */
+function parseBenchOptions(options: Record<string, string | boolean | undefined>) {
+  const number = (value: string | boolean | undefined): number | undefined => {
+    if (typeof value !== 'string') return undefined;
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  return {
+    provider: options.provider as string | undefined,
+    model: options.model as string | undefined,
+    mode: options.mode as string | undefined,
+    free: options.free === true,
+    filter: options.filter as string | undefined,
+    limit: number(options.limit),
+    maxIterations: number(options.maxIterations),
+    selfVerify: options.selfVerify === true,
+    keepSandbox: options.keepSandbox === true,
+    json: options.json === true,
+    out: options.out as string | undefined,
+  };
+}
+
 export function createCLI(): Command {
   const program = new Command();
 
@@ -431,6 +454,107 @@ export function createCLI(): Command {
     .action(async (provider?: string) => {
       const { runProvidersModels } = await import('./commands/providers.js');
       await runProvidersModels(provider);
+    });
+
+  // ─── BENCH COMMAND ────────────────────────────────────────────────────────
+  const benchCmd = program
+    .command('bench')
+    .description('Run the agent against a task suite and grade it independently');
+
+  const benchCommonOptions = (command: Command): Command =>
+    command
+      .option('-p, --provider <name>', 'AI provider to use')
+      .option('-m, --model <name>', 'Model to use')
+      .option('--mode <name>', 'Agent mode', 'code')
+      .option('--free', 'Use only free providers')
+      .option('--filter <pattern>', 'Only tasks matching this pattern')
+      .option('--limit <n>', 'Stop after this many tasks')
+      .option('--max-iterations <n>', 'Agent steps per task')
+      .option('--self-verify', 'Let the agent run the task\'s own check before it stops')
+      .option('--keep-sandbox', 'Leave each task directory behind for inspection')
+      .option('--json', 'Print the run as JSON')
+      .option('--out <dir>', 'Where to write the report');
+
+  benchCommonOptions(
+    benchCmd
+      .command('local', { isDefault: true })
+      .description('Cude\'s own suite — no Docker, no dataset, no network')
+  ).action(async (options: Record<string, string | boolean | undefined>) => {
+    const { runBenchLocal } = await import('./commands/bench.js');
+    await runBenchLocal(parseBenchOptions(options));
+  });
+
+  benchCommonOptions(
+    benchCmd
+      .command('swebench')
+      .description('Run SWE-bench instances and emit predictions.jsonl for the official evaluator')
+      .requiredOption('--dataset <file>', 'SWE-bench (Verified) .jsonl or .json file')
+      .option('--repo-cache <dir>', 'Directory of pre-cloned repositories, to avoid re-cloning')
+  ).action(async (options: Record<string, string | boolean | undefined>) => {
+    const { runBenchSweBench } = await import('./commands/bench.js');
+    await runBenchSweBench(options.dataset as string, {
+      ...parseBenchOptions(options),
+      repoCache: options.repoCache as string | undefined,
+    });
+  });
+
+  benchCommonOptions(
+    benchCmd
+      .command('terminal-bench')
+      .description('Run Terminal-Bench task directories locally (never an official score)')
+      .requiredOption('--tasks <dir>', 'Terminal-Bench tasks directory')
+  ).action(async (options: Record<string, string | boolean | undefined>) => {
+    const { runBenchTerminal } = await import('./commands/bench.js');
+    await runBenchTerminal(options.tasks as string, parseBenchOptions(options));
+  });
+
+  benchCmd
+    .command('list')
+    .description('Show the suites and what each one needs')
+    .action(async () => {
+      const { runBenchList } = await import('./commands/bench.js');
+      runBenchList();
+    });
+
+  // ─── SECURITY COMMAND ─────────────────────────────────────────────────────
+  const securityCmd = program
+    .command('security')
+    .alias('sec')
+    .description('Scan for leaked credentials and audit what this agent is allowed to do');
+
+  securityCmd
+    .command('scan [directory]')
+    .description('Find hardcoded credentials in a project (defaults to the workspace root)')
+    .option('--json', 'Machine-readable output')
+    .option('--strict', 'Exit non-zero when anything is found (for CI)')
+    .action(async (directory: string | undefined, options: { json?: boolean; strict?: boolean }) => {
+      const { runSecurityScan } = await import('./commands/security.js');
+      runSecurityScan(directory, options);
+    });
+
+  securityCmd
+    .command('audit', { isDefault: true })
+    .description('Report key storage, MCP trust, file permissions and which protections are off')
+    .action(async () => {
+      const { runSecurityAudit } = await import('./commands/security.js');
+      runSecurityAudit();
+    });
+
+  securityCmd
+    .command('log')
+    .description('Show the audit log of tool calls')
+    .option('-n, --lines <count>', 'How many entries to show (default: 40)', '40')
+    .action(async (options: { lines?: string }) => {
+      const { runSecurityLog } = await import('./commands/security.js');
+      runSecurityLog({ lines: parseInt(options.lines ?? '40', 10) });
+    });
+
+  securityCmd
+    .command('check <path>')
+    .description('Say whether the agent is allowed to read a path, and why')
+    .action(async (path: string) => {
+      const { runSecurityCheck } = await import('./commands/security.js');
+      runSecurityCheck(path);
     });
 
   // ─── SETUP COMMAND (shorthand) ────────────────────────────────────────────

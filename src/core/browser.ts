@@ -1,6 +1,8 @@
 import { resolve } from 'path';
 import type { ToolDefinition } from '../providers/types.js';
 import type { ToolResult } from './tools.js';
+import { getWorkspaceRoot, isInsideWorkspace } from './tools.js';
+import { denyUrlReason } from './security.js';
 
 export const BROWSER_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -98,10 +100,27 @@ async function getBrowser() {
   }
 }
 
+/**
+ * The browser is the agent's connection to content nobody vetted, and the
+ * shortest path from a hostile page to a stolen cloud role is a request to a
+ * metadata endpoint. Every entry point checks its URL before a page is opened.
+ */
+function guardUrl(url: string): ToolResult | null {
+  const reason = denyUrlReason(url);
+  if (!reason) return null;
+  return { success: false, output: '', error: reason };
+}
+
 export async function executeBrowserTool(
   name: string,
   args: Record<string, unknown>
 ): Promise<ToolResult> {
+  const url = args.url;
+  if (typeof url === 'string') {
+    const denied = guardUrl(url);
+    if (denied) return denied;
+  }
+
   switch (name) {
     case 'browser_navigate':
       return browserNavigate(
@@ -172,13 +191,25 @@ async function browserScreenshot(
   output: string,
   fullPage?: boolean
 ): Promise<ToolResult> {
+  // browser_screenshot writes a file, and was the one write path in the tool
+  // set that never went past the workspace boundary.
+  const outputPath = resolve(output);
+  if (!isInsideWorkspace(outputPath)) {
+    return {
+      success: false,
+      output: '',
+      error:
+        `Refusing to save a screenshot outside the workspace root.\n` +
+        `  output: ${outputPath}\n  workspace root: ${getWorkspaceRoot()}`,
+    };
+  }
+
   let browser;
   try {
     browser = await getBrowser();
     const page = await browser.newPage();
     await page.goto(url, { timeout: 30000, waitUntil: 'domcontentloaded' });
 
-    const outputPath = resolve(output);
     await page.screenshot({ path: outputPath, fullPage: fullPage ?? false });
 
     await browser.close();

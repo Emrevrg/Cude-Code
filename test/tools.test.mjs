@@ -347,8 +347,15 @@ describe('browser', { skip: (await chromiumAvailable()) ? false : 'Chromium not 
     bdir = mkdtempSync(join(tmpdir(), 'cude-browser-'));
     page = join(bdir, 'page.html');
     writeFileSync(page, '<html><head><title>T</title></head><body><h1 id="h">Hi</h1></body></html>');
+    // browser_screenshot writes a file, and now respects the workspace
+    // boundary like every other write — so the root has to cover this
+    // directory rather than the fixture one.
+    setWorkspaceRoot(bdir);
   });
-  after(() => rmSync(bdir, { recursive: true, force: true }));
+  after(() => {
+    setWorkspaceRoot(dir);
+    rmSync(bdir, { recursive: true, force: true });
+  });
 
   test('navigate returns page content', async () => {
     const res = await ok('browser_navigate', { url: `file://${page}` });

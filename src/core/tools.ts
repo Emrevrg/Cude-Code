@@ -8,8 +8,28 @@ import type { ToolDefinition } from '../providers/types.js';
 import { BROWSER_TOOL_DEFINITIONS, executeBrowserTool } from './browser.js';
 import { RAG_TOOL_DEFINITIONS, executeRagTool } from './rag.js';
 import { isMcpTool, executeMcpTool, getMcpToolDefinitions } from '../mcp/registry.js';
+import {
+  analyzeCommand,
+  containsRedaction,
+  denyReadReason,
+  findSecrets,
+  isDestructiveCommand,
+  recordAudit,
+  redactSecrets,
+  redactionNotice,
+  scrubbedEnv,
+  shouldSkipDuringWalk,
+  summarizeArgs,
+  wrapUntrusted,
+  REDACTION_MARKER,
+} from './security.js';
 
 const execAsync = promisify(exec);
+
+// `isDestructiveCommand` moved into the security core alongside the rest of the
+// command analysis; it stays exported here because that is where callers and
+// the test suite have always found it.
+export { isDestructiveCommand };
 
 export interface ToolResult {
   success: boolean;
@@ -351,47 +371,19 @@ function guardWritePath(filePath: string, label = 'path'): ToolResult | null {
   };
 }
 
-// ─── Destructive commands ───────────────────────────────────────────────────
+// ─── Read boundary ──────────────────────────────────────────────────────────
 //
-// The old list was nine POSIX regexes applied only to run_command, so none of
-// `del /f /s /q`, `rd /s /q` or `Remove-Item -Recurse -Force` matched on
-// Windows — and `git_command` and `npm_command` bypassed the check entirely.
-const DESTRUCTIVE_PATTERNS = [
-  // POSIX
-  /\brm\s+(-\w*[rf]\w*|--recursive|--force)/i,
-  /sudo\s+rm/i,
-  /\bmkfs\./i,
-  /\bdd\s+if=/i,
-  />\s*\/dev\//i,
-  /\bshutdown\b/i,
-  /\breboot\b/i,
-  // `format ` alone also matched `npm run format`, which now reaches this
-  // check; a drive letter is what makes it the destructive command.
-  /\bformat\s+[a-z]:/i,
-  // Windows cmd
-  /\bdel\s+\/[a-z]/i,
-  /\brd\s+\/s/i,
-  /\brmdir\s+\/s/i,
-  /\bdiskpart\b/i,
-  // PowerShell
-  /\bRemove-Item\b[\s\S]*(-Recurse|-Force)/i,
-  /\bInvoke-Expression\b/i,
-  /(^|[\s;|])iex(\s|$)/i,
-  // Piping a download straight into a shell
-  /\|\s*(sudo\s+)?(ba|z|k)?sh\b/i,
-  /\|\s*(powershell|pwsh)\b/i,
-  // git and npm reach this check now, and some of their subcommands destroy
-  // work that is not recoverable from the repository.
-  /\bgit\s+clean\b[^;|]*\s-[a-z]*f/i,
-  /\bgit\s+reset\s+--hard/i,
-  /\bgit\s+push\b[^;|]*\s(--force(?!-with-lease)|-f)\b/i,
-  /\bgit\s+branch\s+-D\b/,
-  /\bgit\s+checkout\s+--\s/i,
-  /\bnpm\s+(publish|unpublish)\b/i,
-];
+// Writes are confined to the workspace; reads never were, on the argument that
+// the agent often needs to look outside the tree. That argument holds for
+// source files and holds for nothing else: `~/.ssh/id_rsa` and `~/.aws/
+// credentials` have exactly one reason to be read by an agent, and it is not a
+// good one. The deny-list lives in the security core.
 
-export function isDestructiveCommand(command: string): boolean {
-  return DESTRUCTIVE_PATTERNS.some(p => p.test(command));
+/** Returns a ToolResult to abort with, or null when the read is allowed. */
+function guardReadPath(filePath: string): ToolResult | null {
+  const reason = denyReadReason(filePath);
+  if (!reason) return null;
+  return { success: false, output: '', error: reason };
 }
 
 type ConfirmCallback = (message: string) => Promise<boolean>;
@@ -448,7 +440,52 @@ function findMissingParams(name: string, args: Record<string, unknown>): string[
   );
 }
 
+/** Tools whose output came from somewhere outside this machine's trust boundary. */
+function isUntrustedSource(name: string): boolean {
+  return name.startsWith('browser_') || isMcpTool(name);
+}
+
+/**
+ * The single choke point every tool call passes through.
+ *
+ * Putting redaction and auditing here rather than in each implementation is
+ * what makes them hold: a tool added later gets both without its author having
+ * to remember, and there is one place to look when asking "could this call
+ * have leaked something?".
+ */
 export async function executeTool(
+  name: string,
+  args: Record<string, unknown>
+): Promise<ToolResult> {
+  const result = await dispatchTool(name, args);
+
+  if (!result.success) {
+    recordAudit({
+      tool: name,
+      args: summarizeArgs(args),
+      outcome: 'error',
+      detail: result.error?.slice(0, 200),
+    });
+    return { ...result, error: result.error ? redactSecrets(result.error).text : result.error };
+  }
+
+  // Nothing credential-shaped reaches the model, the transcript or the session
+  // file — regardless of which tool produced it or how it got on disk.
+  const { text, findings } = redactSecrets(result.output);
+  const body = isUntrustedSource(name) ? wrapUntrusted(name, text) : text;
+  const output = body + redactionNotice(findings);
+
+  recordAudit({
+    tool: name,
+    args: summarizeArgs(args),
+    outcome: 'ok',
+    detail: findings.length ? `${findings.length} secret(s) redacted` : undefined,
+  });
+
+  return { ...result, output };
+}
+
+async function dispatchTool(
   name: string,
   args: Record<string, unknown>
 ): Promise<ToolResult> {
@@ -537,14 +574,31 @@ export async function executeTool(
   }
 }
 
+/** A file larger than this is read by range, not swallowed whole. */
+export const MAX_READ_BYTES = 10 * 1024 * 1024;
+
 function executeReadFile(filePath: string, startLine?: number, endLine?: number): ToolResult {
+  const denied = guardReadPath(filePath);
+  if (denied) return denied;
   try {
     const resolved = resolve(filePath);
     if (!existsSync(resolved)) {
       return { success: false, output: '', error: `File not found: ${filePath}` };
     }
+    // Reading an arbitrarily large file into a string is how a tool call takes
+    // the whole CLI down with it.
+    const size = statSync(resolved).size;
+    if (size > MAX_READ_BYTES) {
+      return {
+        success: false,
+        output: '',
+        error:
+          `${filePath} is ${(size / 1024 / 1024).toFixed(1)} MB, over the ${MAX_READ_BYTES / 1024 / 1024} MB read limit. ` +
+          `Read a range with start_line/end_line, or use grep_search.`,
+      };
+    }
     let content = readFileSync(resolved, 'utf-8');
-    
+
     if (startLine !== undefined || endLine !== undefined) {
       const lines = content.split('\n');
       const start = (startLine ?? 1) - 1;
@@ -558,9 +612,45 @@ function executeReadFile(filePath: string, startLine?: number, endLine?: number)
   }
 }
 
-function executeWriteFile(filePath: string, content: string): ToolResult {
+/**
+ * Two things must never be written.
+ *
+ * A redaction marker means the model is echoing back output this layer
+ * already cleaned — writing it lands the placeholder on top of the real value
+ * and destroys it. A freshly minted credential in file content is the exact
+ * failure the industry keeps reporting: the assistant writes a working key
+ * into the repository and it gets committed.
+ */
+async function guardWriteContent(filePath: string, content: string): Promise<ToolResult | null> {
+  if (containsRedaction(content)) {
+    return {
+      success: false,
+      output: '',
+      error:
+        `Refusing to write ${REDACTION_MARKER}…] to ${filePath}. That marker is a placeholder this ` +
+        `session substituted for a real secret — writing it back would overwrite the actual value. ` +
+        `Edit the surrounding lines instead, and leave the credential line alone.`,
+    };
+  }
+
+  const findings = findSecrets(content);
+  if (findings.length === 0) return null;
+
+  const kinds = [...new Set(findings.map(f => f.description))].join(', ');
+  return requireConfirmation(
+    `WARNING: this write puts what looks like a live credential into a file!\n` +
+    `  file: ${resolve(filePath)}\n` +
+    `  found: ${kinds}\n` +
+    `  Hardcoded keys are the single most common way these projects leak.\n` +
+    `  Prefer an environment variable. Write it anyway?`
+  );
+}
+
+async function executeWriteFile(filePath: string, content: string): Promise<ToolResult> {
   const outside = guardWritePath(filePath, 'file');
   if (outside) return outside;
+  const unsafeContent = await guardWriteContent(filePath, content);
+  if (unsafeContent) return unsafeContent;
   try {
     const resolved = resolve(filePath);
     const dir = dirname(resolved);
@@ -574,9 +664,11 @@ function executeWriteFile(filePath: string, content: string): ToolResult {
   }
 }
 
-function executeReplaceInFile(filePath: string, oldText: string, newText: string, replaceAll?: boolean): ToolResult {
+async function executeReplaceInFile(filePath: string, oldText: string, newText: string, replaceAll?: boolean): Promise<ToolResult> {
   const outside = guardWritePath(filePath, 'file');
   if (outside) return outside;
+  const unsafeContent = await guardWriteContent(filePath, newText);
+  if (unsafeContent) return unsafeContent;
   try {
     const resolved = resolve(filePath);
     if (!existsSync(resolved)) {
@@ -630,6 +722,10 @@ function executeMoveFile(source: string, destination: string): ToolResult {
 }
 
 function executeDiffFiles(fileA: string, fileB: string): ToolResult {
+  const deniedA = guardReadPath(fileA);
+  if (deniedA) return deniedA;
+  const deniedB = guardReadPath(fileB);
+  if (deniedB) return deniedB;
   try {
     const pathA = resolve(fileA);
     const pathB = resolve(fileB);
@@ -663,9 +759,147 @@ function executeDiffFiles(fileA: string, fileB: string): ToolResult {
   }
 }
 
-function executeApplyPatch(filePath: string, patch: string): ToolResult {
+// ─── Unified diff ───────────────────────────────────────────────────────────
+//
+// The previous implementation walked the patch and spliced as it went, keyed
+// on the hunk header's line number. Two things followed from that. A `-` line
+// whose text did not match was skipped — while the `+` lines around it were
+// still inserted, so a patch aimed at a file that had moved on by three lines
+// produced a corrupted file and reported success. And every hunk after the
+// first was applied at the wrong offset, because the header numbers describe
+// the original file, not the one being mutated in place.
+//
+// This version locates each hunk by its content, applies all of them or none,
+// and says which hunk failed when it cannot.
+
+interface PatchHunk {
+  /** 1-indexed line the hunk claims to start at in the original file. */
+  oldStart: number;
+  /** Context and removed lines: what must be present to apply. */
+  expected: string[];
+  /** Context and added lines: what replaces it. */
+  replacement: string[];
+  added: number;
+  removed: number;
+}
+
+export function parseUnifiedDiff(patch: string): PatchHunk[] {
+  const hunks: PatchHunk[] = [];
+  const lines = patch.split('\n');
+  let current: PatchHunk | null = null;
+
+  for (const line of lines) {
+    const header = line.match(/^@@\s*-(\d+)(?:,\d+)?\s+\+(\d+)(?:,\d+)?\s*@@/);
+    if (header) {
+      if (current) hunks.push(current);
+      current = {
+        oldStart: parseInt(header[1], 10),
+        expected: [],
+        replacement: [],
+        added: 0,
+        removed: 0,
+      };
+      continue;
+    }
+    if (!current) continue;
+    if (line.startsWith('---') || line.startsWith('+++') || line.startsWith('diff ') || line.startsWith('index ')) {
+      continue;
+    }
+    // "\ No newline at end of file" is a marker, not content.
+    if (line.startsWith('\\')) continue;
+    // A context line for a blank line is a single space; a genuinely empty
+    // line is padding between hunks. Treating padding as context made every
+    // multi-hunk patch expect a blank line that was not there.
+    if (line.length === 0) continue;
+
+    if (line.startsWith('+')) {
+      current.replacement.push(line.slice(1));
+      current.added++;
+    } else if (line.startsWith('-')) {
+      current.expected.push(line.slice(1));
+      current.removed++;
+    } else {
+      // A context line, with or without its leading space.
+      const text = line.startsWith(' ') ? line.slice(1) : line;
+      current.expected.push(text);
+      current.replacement.push(text);
+    }
+  }
+
+  if (current) hunks.push(current);
+  return hunks;
+}
+
+/** How far from the stated line a hunk may be found. Beyond this it is not the same hunk. */
+const PATCH_SEARCH_WINDOW = 200;
+
+function findHunk(lines: string[], expected: string[], hint: number): number {
+  if (expected.length === 0) return Math.min(Math.max(hint, 0), lines.length);
+
+  const matchesAt = (index: number): boolean => {
+    if (index < 0 || index + expected.length > lines.length) return false;
+    for (let i = 0; i < expected.length; i++) {
+      if (lines[index + i] !== expected[i]) return false;
+    }
+    return true;
+  };
+
+  if (matchesAt(hint)) return hint;
+  for (let offset = 1; offset <= PATCH_SEARCH_WINDOW; offset++) {
+    if (matchesAt(hint - offset)) return hint - offset;
+    if (matchesAt(hint + offset)) return hint + offset;
+  }
+  return -1;
+}
+
+export type PatchOutcome =
+  | { ok: true; content: string; hunksApplied: number; linesChanged: number }
+  | { ok: false; error: string };
+
+/**
+ * Applies every hunk or none. Returning the original file unchanged on failure
+ * is the point: a half-applied patch is worse than a refused one, because the
+ * model cannot tell the difference from the outside.
+ */
+export function applyUnifiedDiff(original: string, patch: string): PatchOutcome {
+  const hunks = parseUnifiedDiff(patch);
+  if (hunks.length === 0) {
+    return { ok: false, error: 'Patch contains no @@ hunks. Provide a unified diff.' };
+  }
+
+  const lines = original.split('\n');
+  let offset = 0;
+  let linesChanged = 0;
+
+  for (let h = 0; h < hunks.length; h++) {
+    const hunk = hunks[h];
+    const hint = Math.max(0, hunk.oldStart - 1 + offset);
+    const at = findHunk(lines, hunk.expected, hint);
+
+    if (at === -1) {
+      const firstExpected = hunk.expected[0] ?? '(empty)';
+      return {
+        ok: false,
+        error:
+          `Hunk ${h + 1} of ${hunks.length} does not match the file — nothing was written.\n` +
+          `  expected near line ${hunk.oldStart}: ${JSON.stringify(firstExpected.slice(0, 80))}\n` +
+          `Re-read the file and build the patch from its current contents.`,
+      };
+    }
+
+    lines.splice(at, hunk.expected.length, ...hunk.replacement);
+    offset += hunk.replacement.length - hunk.expected.length;
+    linesChanged += hunk.added + hunk.removed;
+  }
+
+  return { ok: true, content: lines.join('\n'), hunksApplied: hunks.length, linesChanged };
+}
+
+async function executeApplyPatch(filePath: string, patch: string): Promise<ToolResult> {
   const outside = guardWritePath(filePath, 'file');
   if (outside) return outside;
+  const unsafeContent = await guardWriteContent(filePath, patch);
+  if (unsafeContent) return unsafeContent;
   try {
     const resolved = resolve(filePath);
     if (!existsSync(resolved)) {
@@ -673,42 +907,17 @@ function executeApplyPatch(filePath: string, patch: string): ToolResult {
     }
 
     const original = readFileSync(resolved, 'utf-8');
-    const lines = original.split('\n');
-    const patchLines = patch.split('\n');
-    let index = 0;
-    let applied = 0;
+    const result = applyUnifiedDiff(original, patch);
 
-    while (index < patchLines.length) {
-      const line = patchLines[index];
-      const hunkMatch = line.match(/^@@\s*-(\d+)(?:,\d+)?\s*\+(\d+)(?:,\d+)?\s*@@/);
-      if (!hunkMatch) { index++; continue; }
-      const startLine = Math.max(0, parseInt(hunkMatch[2], 10) - 1);
-      index++;
-      let cursor = startLine;
-      while (index < patchLines.length && !patchLines[index].startsWith('@@')) {
-        const pl = patchLines[index];
-        if (pl.startsWith('---') || pl.startsWith('+++') || pl.startsWith('diff ')) { index++; continue; }
-        if (pl.startsWith(' ')) {
-          cursor++;
-        } else if (pl.startsWith('-')) {
-          if (lines[cursor] === pl.slice(1)) {
-            lines.splice(cursor, 1);
-            applied++;
-          }
-        } else if (pl.startsWith('+')) {
-          lines.splice(cursor, 0, pl.slice(1));
-          cursor++;
-          applied++;
-        }
-        index++;
-      }
+    if (!result.ok) {
+      return { success: false, output: '', error: result.error };
     }
 
-    if (applied === 0) {
-      return { success: false, output: '', error: 'Patch did not apply: no hunks matched' };
-    }
-    writeFileSync(resolved, lines.join('\n'), 'utf-8');
-    return { success: true, output: `Applied patch (${applied} line change(s)) to ${filePath}` };
+    writeFileSync(resolved, result.content, 'utf-8');
+    return {
+      success: true,
+      output: `Applied ${result.hunksApplied} hunk(s), ${result.linesChanged} line change(s) to ${filePath}`,
+    };
   } catch (err) {
     return { success: false, output: '', error: `Failed to apply patch: ${err instanceof Error ? err.message : String(err)}` };
   }
@@ -740,6 +949,10 @@ async function executeDeleteFile(filePath: string): Promise<ToolResult> {
 function executeCopyFile(source: string, destination: string): ToolResult {
   const outside = guardWritePath(destination, 'destination');
   if (outside) return outside;
+  // Copying a key file into the workspace and reading the copy would otherwise
+  // walk straight around the read guard.
+  const denied = guardReadPath(source);
+  if (denied) return denied;
   try {
     const sourcePath = resolve(source);
     const destPath = resolve(destination);
@@ -760,22 +973,77 @@ function executeCopyFile(source: string, destination: string): ToolResult {
   }
 }
 
-/** Confirmation gate shared by run_command, git_command and npm_command. */
-async function guardDestructiveCommand(command: string): Promise<ToolResult | null> {
-  if (!isDestructiveCommand(command)) return null;
-  return requireConfirmation(
-    `WARNING: Destructive command detected!\n  ${command}\n  Do you want to proceed?`
+/**
+ * Confirmation gate shared by run_command, git_command and npm_command.
+ *
+ * The old gate asked one question — "does this look like `rm -rf`?" — which
+ * says nothing about the command that quietly POSTs `~/.aws/credentials` to a
+ * host the model read off a web page. The security core classifies three ways
+ * now: run it, ask about it, or refuse it outright.
+ */
+async function guardCommand(command: string): Promise<ToolResult | null> {
+  const { verdict, reason } = analyzeCommand(command);
+
+  if (verdict === 'allow') return null;
+
+  if (verdict === 'block') {
+    recordAudit({ tool: 'run_command', args: summarizeArgs({ command }), outcome: 'blocked', detail: reason });
+    return {
+      success: false,
+      output: '',
+      error:
+        `Refusing to run this command — ${reason}.\n  ${command}\n` +
+        `This class of command is blocked outright rather than confirmed. ` +
+        `If it is genuinely what you want, set CUDE_ALLOW_UNSAFE_COMMANDS=1 and run it yourself.`,
+    };
+  }
+
+  const denied = await requireConfirmation(
+    `WARNING: this command needs your approval — ${reason}.\n  ${command}\n  Do you want to proceed?`
   );
+  if (denied) {
+    recordAudit({ tool: 'run_command', args: summarizeArgs({ command }), outcome: 'denied', detail: reason });
+  }
+  return denied;
 }
 
+/** Confines a command's working directory the same way writes are confined. */
+function resolveCommandCwd(cwd?: string): { dir: string } | { error: ToolResult } {
+  if (!cwd) return { dir: process.cwd() };
+  const resolved = resolve(cwd);
+  if (!isInsideWorkspace(resolved)) {
+    return {
+      error: {
+        success: false,
+        output: '',
+        error:
+          `Refusing to run a command outside the workspace root.\n` +
+          `  cwd: ${resolved}\n  workspace root: ${getWorkspaceRoot()}`,
+      },
+    };
+  }
+  return { dir: resolved };
+}
+
+/** Caps a runaway command's output instead of buffering it until the process dies. */
+const MAX_COMMAND_OUTPUT_BYTES = 10 * 1024 * 1024;
+
 async function executeRunCommand(command: string, cwd?: string, timeout?: number): Promise<ToolResult> {
-  const blocked = await guardDestructiveCommand(command);
+  const blocked = await guardCommand(command);
   if (blocked) return blocked;
+
+  const target = resolveCommandCwd(cwd);
+  if ('error' in target) return target.error;
 
   try {
     const { stdout, stderr } = await execAsync(command, {
-      cwd: cwd ? resolve(cwd) : process.cwd(),
+      cwd: target.dir,
       timeout: timeout ?? 60000,
+      maxBuffer: MAX_COMMAND_OUTPUT_BYTES,
+      // A child process has no business inheriting the API keys this one holds:
+      // one malicious postinstall script is all it takes.
+      env: scrubbedEnv(),
+      windowsHide: true,
     });
     const output = stdout + (stderr ? `\nSTDERR: ${stderr}` : '');
     return { success: true, output };
@@ -854,6 +1122,8 @@ function executeCreateDirectory(dirPath: string): ToolResult {
 }
 
 function executeGetFileInfo(filePath: string): ToolResult {
+  const denied = guardReadPath(filePath);
+  if (denied) return denied;
   try {
     const resolved = resolve(filePath);
     if (!existsSync(resolved)) {
@@ -972,6 +1242,9 @@ async function executeGrepSearch(pattern: string, directory: string, filePattern
           walk(full);
         } else if (stat.isFile()) {
           if (includeRE && !includeRE.test(item)) continue;
+          // A grep is a read. Without this, `grep_search . "="` walks straight
+          // through every .env and .pem in the tree.
+          if (shouldSkipDuringWalk(full)) continue;
           let content: string;
           try {
             content = readFileSync(full, 'utf-8');
@@ -1002,11 +1275,17 @@ async function executeGrepSearch(pattern: string, directory: string, filePattern
 }
 
 async function executeGitCommand(command: string, cwd?: string): Promise<ToolResult> {
-  const blocked = await guardDestructiveCommand(`git ${command}`);
+  const blocked = await guardCommand(`git ${command}`);
   if (blocked) return blocked;
+  const target = resolveCommandCwd(cwd);
+  if ('error' in target) return target.error;
   try {
     const { stdout, stderr } = await execAsync(`git ${command}`, {
-      cwd: cwd ? resolve(cwd) : process.cwd(),
+      cwd: target.dir,
+      timeout: 120000,
+      maxBuffer: MAX_COMMAND_OUTPUT_BYTES,
+      env: scrubbedEnv(),
+      windowsHide: true,
     });
     return { success: true, output: stdout + (stderr ? `\n${stderr}` : '') };
   } catch (err) {
@@ -1024,12 +1303,19 @@ async function executeGitCommand(command: string, cwd?: string): Promise<ToolRes
 
 async function executeNpmCommand(command: string, cwd?: string): Promise<ToolResult> {
   // npm can run arbitrary package scripts, so it gets the same scrutiny.
-  const blocked = await guardDestructiveCommand(`npm ${command}`);
+  const blocked = await guardCommand(`npm ${command}`);
   if (blocked) return blocked;
+  const target = resolveCommandCwd(cwd);
+  if ('error' in target) return target.error;
   try {
     const { stdout, stderr } = await execAsync(`npm ${command}`, {
-      cwd: cwd ? resolve(cwd) : process.cwd(),
+      cwd: target.dir,
       timeout: 120000,
+      maxBuffer: MAX_COMMAND_OUTPUT_BYTES,
+      // Lifecycle scripts run as this user with this environment. Without the
+      // scrub, `npm install` hands every configured API key to every package.
+      env: scrubbedEnv(),
+      windowsHide: true,
     });
     return { success: true, output: stdout + (stderr ? `\n${stderr}` : '') };
   } catch (err) {

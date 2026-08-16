@@ -45,8 +45,12 @@ const WRITE_PATH_ARGS: Record<string, string> = {
   copy_file: 'destination',
 };
 
-/** Tools that only observe. Every mode gets these. */
-const READ_ONLY_TOOLS = [
+/**
+ * Tools that only observe. Every mode gets these, and because none of them
+ * mutates anything, a turn made up entirely of these calls can run in
+ * parallel.
+ */
+export const READ_ONLY_TOOLS = [
   'read_file',
   'list_directory',
   'search_files',

@@ -33,6 +33,8 @@ cude chat
 - **Autonomous Agent**: Solve complex tasks with tool-use
 - **Cost Tracking**: Monitor spending, set budgets, get alerts
 - **Session Management**: Save and restore conversations
+- **Credentials Never Leave**: Key files are unreadable to the agent, secrets are
+  redacted out of every tool result, and child processes don't inherit your keys
 - **Privacy First**: Everything stays on your machine
 - **Pure CLI**: No Electron, lightweight and fast
 
@@ -178,6 +180,62 @@ cude mcp disable docs
 Servers are verified before they are saved, tools are namespaced
 `mcp__<server>__<tool>` so none can shadow a built-in, and a server that fails
 to start is reported and skipped rather than taking the run down.
+
+### Benchmarks
+
+Cude Code has **no verified score on any independent leaderboard** — not
+Terminal-Bench, not SWE-bench Verified. What it has is the harness that
+produces one, so the claim can be checked rather than asserted.
+
+```bash
+cude bench list                 # suites, and what each one needs
+cude bench local                # 8 tasks graded by node --test — no Docker, no network
+cude bench swebench --dataset swe-bench-verified.jsonl --limit 25
+```
+
+Grading is independent of the agent: a verifier is a shell command run after
+the agent stops, so `TASK COMPLETE:` in the model's last message counts for
+nothing. Every task starts out failing (there is a test asserting it), every
+task runs in its own sandbox, and every report states whether it is a local
+run, an unofficial dataset run, or an official evaluator's grade. For
+SWE-bench, Cude emits `predictions.jsonl` for the official Docker harness to
+score — it does not grade itself.
+
+See [BENCHMARKS.md](BENCHMARKS.md) for the full method and the exact commands.
+
+### Security
+
+An AI agent holds your shell, your files and your API keys, and it reads
+content anyone can write — web pages, dependency READMEs, MCP results. Cude
+assumes that content is hostile and enforces the boundary in code rather than
+in the prompt.
+
+```bash
+cude security audit          # key storage, permissions, MCP trust, what is off
+cude security scan           # find hardcoded credentials in this project
+cude security scan --strict  # exits non-zero on a finding — for CI
+cude security check .env     # why a path is or is not readable
+cude security log            # every tool call the agent has made
+```
+
+What that buys you, without any configuration:
+
+- **Key files are unreadable.** `.env`, `~/.ssh`, `~/.aws`, `*.pem`, `.npmrc`
+  and the rest are refused by every read path — `read_file`, `grep_search`,
+  RAG indexing, `@path` mentions, `file://` URLs. `.env.example` still works.
+- **Secrets are redacted on the way out.** Anything key-shaped in a tool result
+  is replaced with `[CUDE:REDACTED:…]` before the model, the terminal or the
+  session file ever sees it — and a write that would put that marker back over
+  the real value is refused.
+- **Your keys stay out of child processes.** `npm install`, `run_command` and
+  MCP servers each get a scrubbed environment.
+- **Exfiltration is blocked, not confirmed.** A command that reads credential
+  material and sends it over the network, or an encoded PowerShell payload, is
+  refused outright. Cloud metadata endpoints are always unreachable.
+- **Everything is logged.** `~/.cude/audit.log`, redacted, append-only.
+
+Every control has a documented escape hatch, and `cude security audit` reports
+any that are switched off. See [SECURITY.md](SECURITY.md) for the full model.
 
 ### Autonomous Tasks
 ```bash

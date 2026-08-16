@@ -1,9 +1,10 @@
-import { readFileSync, writeFileSync, readdirSync, unlinkSync, mkdirSync, existsSync } from 'fs';
+import { readFileSync, readdirSync, unlinkSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
+import { getDataDir } from '../config/index.js';
 import type { Message } from '../providers/types.js';
+import { hardenDirectory, redactSecrets, writeSecureFile } from '../core/security.js';
 
 export interface Session {
   id: string;
@@ -19,10 +20,16 @@ export interface Session {
 }
 
 function getSessionsDir(): string {
-  const dir = join(homedir(), '.cude', 'sessions');
+  // getDataDir() rather than a hardcoded ~/.cude: CUDE_HOME redirects
+  // everything else Cude persists, and sessions were the one store that
+  // ignored it and wrote to the real home directory even under test.
+  const dir = join(getDataDir(), 'sessions');
   if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
+  // A session file is a full transcript of work on this machine, written to a
+  // world-readable path by default. Narrow it to the owner.
+  hardenDirectory(dir);
   return dir;
 }
 
@@ -49,7 +56,12 @@ export function createSession(name: string, provider: string, model: string): Se
 
 export function saveSession(session: Session): void {
   session.updatedAt = new Date().toISOString();
-  writeFileSync(getSessionPath(session.id), JSON.stringify(session, null, 2), 'utf-8');
+  // A transcript that quotes a key is a credential store nobody thinks of as
+  // one — and it outlives the run. Redact on the way to disk; the model has
+  // already seen the redacted form anyway, since tool output is cleaned before
+  // it is ever sent.
+  const serialized = JSON.stringify(session, null, 2);
+  writeSecureFile(getSessionPath(session.id), redactSecrets(serialized).text);
 }
 
 export function loadSession(id: string): Session | null {
