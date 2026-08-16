@@ -1,6 +1,7 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { getDataDir } from '../config/index.js';
+import { writeSecureFile } from '../core/security.js';
 import { McpClient, type McpServerConfig } from './client.js';
 import type { ToolDefinition } from '../providers/types.js';
 
@@ -38,8 +39,10 @@ export function loadMcpConfig(): McpConfig {
 
 export function saveMcpConfig(config: McpConfig): void {
   const dir = getDataDir();
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  writeFileSync(getMcpConfigPath(), JSON.stringify(config, null, 2), 'utf-8');
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 });
+  // Server definitions carry the tokens those servers authenticate with, so
+  // this file is owner-only like the rest of the data directory.
+  writeSecureFile(getMcpConfigPath(), JSON.stringify(config, null, 2));
 }
 
 export function qualifyToolName(server: string, tool: string): string {

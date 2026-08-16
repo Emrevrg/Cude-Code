@@ -3,6 +3,7 @@ import { join, resolve, dirname, relative } from 'path';
 import { randomUUID } from 'crypto';
 import { getDataDir } from '../config/index.js';
 import { getWorkspaceRoot } from './tools.js';
+import { hardenDirectory, writeSecureFile } from './security.js';
 
 /**
  * Undo for agent edits.
@@ -50,7 +51,8 @@ export interface Checkpoint {
 
 function checkpointDir(): string {
   const dir = join(getDataDir(), 'checkpoints');
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 });
+  hardenDirectory(dir);
   return dir;
 }
 
@@ -108,7 +110,11 @@ export function recordCheckpoint(
   };
 
   try {
-    writeFileSync(checkpointPath(checkpoint.id), JSON.stringify(checkpoint, null, 2), 'utf-8');
+    // Owner-only, and deliberately *not* redacted: a checkpoint is an undo
+    // buffer, and restoring a redaction marker over a real credential would
+    // destroy the value it was protecting. The file permissions are the
+    // control here, not redaction.
+    writeSecureFile(checkpointPath(checkpoint.id), JSON.stringify(checkpoint, null, 2));
   } catch {
     // A checkpoint that cannot be written must not stop the run.
     return null;

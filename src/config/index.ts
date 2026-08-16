@@ -1,7 +1,7 @@
 import Conf from 'conf';
 import { homedir } from 'os';
 import { join, resolve } from 'path';
-import { existsSync, renameSync, copyFileSync, readdirSync } from 'fs';
+import { existsSync, renameSync, copyFileSync, readdirSync, chmodSync, mkdirSync } from 'fs';
 
 export interface AppConfig {
   apiKeys: {
@@ -78,6 +78,30 @@ function migrateLegacyDataDir(): void {
 
 let configInstance: Conf<AppConfig> | null = null;
 
+/**
+ * This file holds API keys in plain text, and `conf` writes it 0666 minus the
+ * umask — on most systems 0644, readable by every other account on the
+ * machine. The directory and the file are narrowed to the owner after it is
+ * opened. Done inline rather than through the security core because that
+ * module reads its data directory from here, and the cycle is not worth the
+ * reuse.
+ *
+ * Windows is skipped: mode bits there do not describe the ACL that governs
+ * access, and the user profile directory is already restricted.
+ */
+function hardenDataDir(): void {
+  if (process.platform === 'win32') return;
+  const dir = getDataDir();
+  try {
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 });
+    chmodSync(dir, 0o700);
+    const file = join(dir, 'config.json');
+    if (existsSync(file)) chmodSync(file, 0o600);
+  } catch {
+    // Hardening is best-effort: never stop the CLI from starting over it.
+  }
+}
+
 export function getConfig(): Conf<AppConfig> {
   if (!configInstance) {
     migrateLegacyDataDir();
@@ -86,6 +110,7 @@ export function getConfig(): Conf<AppConfig> {
       defaults: defaultConfig,
       cwd: getDataDir(),
     });
+    hardenDataDir();
   }
   return configInstance;
 }
@@ -134,6 +159,8 @@ export function setApiKey(provider: string, key: string): void {
   const keys = config.get('apiKeys') as AppConfig['apiKeys'];
   (keys as Record<string, string>)[provider] = key;
   config.set('apiKeys', keys);
+  // `conf` rewrites the file on every set, with fresh default permissions.
+  hardenDataDir();
 }
 
 export function removeApiKey(provider: string): void {

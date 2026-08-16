@@ -8,6 +8,7 @@ import { recordCheckpoint, MUTATING_TOOLS } from './checkpoints.js';
 import { selectProviderAndModel, type TaskType } from './selector.js';
 import { validateTurnSequence } from '../providers/wire.js';
 import { checkBudgetAlert, recordSpending } from '../storage/budget.js';
+import { denyReadReason, redactSecrets } from './security.js';
 import type { Message, Provider, ToolCall } from '../providers/types.js';
 
 /**
@@ -129,8 +130,16 @@ export class ClawSession {
         attachments.push(`--- @${mention} ---\n(no such file)`);
         continue;
       }
+      // `@` expansion is a read like any other, and it bypassed read_file
+      // entirely — so it bypassed the credential deny-list and the redaction
+      // pass with it.
+      const denied = denyReadReason(path);
+      if (denied) {
+        attachments.push(`--- @${mention} ---\n(${denied.split('\n')[0]})`);
+        continue;
+      }
       try {
-        const content = readFileSync(path, 'utf-8');
+        const content = redactSecrets(readFileSync(path, 'utf-8')).text;
         attachments.push(
           `--- @${mention} ---\n${truncateToolOutput(content, TOOL_RESULT_MAX_CHARS)}`
         );

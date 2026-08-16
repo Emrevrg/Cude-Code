@@ -1,4 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'child_process';
+import { denyUrlReason, scrubbedEnv } from '../core/security.js';
 
 /**
  * A minimal Model Context Protocol client.
@@ -77,6 +78,11 @@ export class McpClient {
     if (this.child) return this.child;
     const config = this.config as StdioServerConfig;
 
+    // A stdio server is a third-party process running as this user. It used to
+    // inherit the full environment — every API key the user had exported went
+    // to every server they configured. It gets a scrubbed environment plus
+    // whatever its own configuration grants it by name.
+
     // Windows needs a shell for the .cmd shims most MCP servers ship as (npx,
     // npm, uvx). With shell: true Node hands the strings to cmd.exe verbatim
     // and quotes nothing, so anything with a space — "C:\Program Files\..." —
@@ -90,13 +96,13 @@ export class McpClient {
     const args = config.args ?? [];
     const child = useShell
       ? spawn([quote(config.command), ...args.map(quote)].join(' '), [], {
-          env: { ...process.env, ...(config.env ?? {}) },
+          env: scrubbedEnv(config.env ?? {}),
           cwd: config.cwd,
           stdio: ['pipe', 'pipe', 'pipe'],
           shell: true,
         })
       : spawn(config.command, args, {
-          env: { ...process.env, ...(config.env ?? {}) },
+          env: scrubbedEnv(config.env ?? {}),
           cwd: config.cwd,
           stdio: ['pipe', 'pipe', 'pipe'],
         });
@@ -209,6 +215,12 @@ export class McpClient {
     isNotification = false
   ): Promise<unknown> {
     const config = this.config as HttpServerConfig;
+
+    // An HTTP server's URL comes from a config file the agent itself can be
+    // talked into writing, so it goes through the same egress check as a page.
+    const denied = denyUrlReason(config.url);
+    if (denied) throw new Error(`MCP server "${this.name}": ${denied}`);
+
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeout);
 

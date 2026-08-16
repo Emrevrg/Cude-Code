@@ -2,6 +2,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { join, extname, resolve } from 'path';
 import type { ToolDefinition } from '../providers/types.js';
 import type { ToolResult } from './tools.js';
+import { shouldSkipDuringWalk } from './security.js';
 
 export const RAG_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -136,9 +137,13 @@ function collectFiles(
     for (const entry of entries) {
       if (results.length >= maxFiles) break;
       if (SKIP_DIRS.has(entry)) continue;
-      if (entry.startsWith('.') && entry !== '.env') continue;
+      // This used to read `entry !== '.env'` — the one dotfile the indexer went
+      // out of its way to include was the one holding the credentials, and a
+      // later rag_search handed its chunks straight to the model.
+      if (entry.startsWith('.')) continue;
 
       const fullPath = join(dir, entry);
+      if (shouldSkipDuringWalk(fullPath)) continue;
       try {
         const stat = statSync(fullPath);
         if (stat.isDirectory()) {
